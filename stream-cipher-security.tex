@@ -1,0 +1,403 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath, amssymb, amsthm}
+\usepackage{mathtools}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[colorlinks=true, linkcolor=black, citecolor=black, urlcolor=blue]{hyperref}
+
+%--------------------------------------------------------------
+% Theorem environments
+%--------------------------------------------------------------
+\theoremstyle{plain}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposition}{Proposition}
+\newtheorem{corollary}{Corollary}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{construction}{Construction}
+\newtheorem{remark}{Remark}
+
+%--------------------------------------------------------------
+% Notation macros
+%--------------------------------------------------------------
+\newcommand{\bit}{\{0,1\}}
+\newcommand{\secp}{n}                       % security parameter
+\newcommand{\adv}{\mathcal{A}}
+\newcommand{\dist}{\mathcal{D}}
+\newcommand{\Enc}{\mathsf{Enc}}
+\newcommand{\Dec}{\mathsf{Dec}}
+\newcommand{\Gen}{\mathsf{Gen}}
+\newcommand{\Real}{\mathsf{real}}
+\newcommand{\negl}{\mathsf{negl}}
+\newcommand{\PPT}{\mathrm{PPT}}
+\newcommand{\uecho}{\ensuremath{\leftarrow}}
+\DeclarePairedDelimiter{\abs}{\lvert}{\rvert}
+\newcommand{\getsr}{\overset{\$}{\leftarrow}}   % uniform sampling
+\newcommand{\Adv}{\mathbf{Adv}}
+\newcommand{\PrivK}{\mathsf{PrivK}}
+\newcommand{\eav}{\mathrm{eav}}
+\newcommand{\prg}{\mathrm{prg}}
+\newcommand{\Pron}{\Pi}
+\newcommand{\Ptilde}{\widetilde{\Pi}}
+
+\allowdisplaybreaks
+
+\title{\bf Security of the Stream Cipher \\ from Pseudorandomness of its Generator}
+\author{}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+We give a self-contained, reductionist proof that the canonical stream-cipher
+encryption scheme---encryption by XOR with the output of a pseudorandom
+generator (PRG)---achieves indistinguishability of encryptions in the presence
+of an eavesdropper, provided the underlying generator is a secure PRG. The
+argument is presented in prose, with the single reduction algorithm displayed as
+pseudocode. The reduction is advantage-preserving: the eavesdropping advantage
+against the cipher is bounded above by the distinguishing advantage against the
+generator, with no loss. We isolate the one-time-pad as the information-theoretic
+anchor of the hybrid and remark on tightness, on the necessity of the
+assumption, and on the failure of the single-message guarantee to extend to the
+multi-message setting for the stateless scheme.
+\end{abstract}
+
+%==============================================================
+\section{Preliminaries and notation}
+%==============================================================
+
+We work in the asymptotic (uniform-complexity) model of computation. Throughout,
+$\secp \in \mathbb{N}$ denotes the security parameter, and all algorithms receive
+$1^\secp$ as (implicit or explicit) input. We write $x \getsr S$ for the
+assignment to $x$ of an element drawn uniformly at random from a finite set $S$,
+and $y \leftarrow \adv(x)$ for the assignment to $y$ of the (possibly
+randomized) output of an algorithm $\adv$ on input $x$. By $\PPT$ we mean
+probabilistic polynomial-time (in $\secp$).
+
+\begin{definition}[Negligible function]
+A function $\negl \colon \mathbb{N} \to \mathbb{R}_{\geq 0}$ is \emph{negligible}
+if for every positive polynomial $p$ there exists $N \in \mathbb{N}$ such that
+$\negl(\secp) < 1/p(\secp)$ for all $\secp > N$. Equivalently,
+$\negl(\secp) = \secp^{-\omega(1)}$.
+\end{definition}
+
+The class of negligible functions is closed under addition and under
+multiplication by any fixed polynomial; we use both facts without comment.
+
+For a bit string $x$ we write $\abs{x}$ for its length and $\oplus$ for bitwise
+exclusive-or; for equal-length strings $x,y$ the map $z \mapsto z \oplus x$ is a
+bijection on $\bit^{\abs{x}}$, a fact we invoke repeatedly.
+
+%==============================================================
+\section{The two definitions in play}
+%==============================================================
+
+\subsection{Pseudorandom generators}
+
+Let $\ell \colon \mathbb{N} \to \mathbb{N}$ be a polynomial with
+$\ell(\secp) > \secp$ for all $\secp$; $\ell$ is the \emph{expansion factor}.
+
+\begin{definition}[Pseudorandom generator]\label{def:prg}
+A deterministic polynomial-time computable function
+$G \colon \bit^{*} \to \bit^{*}$ with $\abs{G(s)} = \ell(\abs{s})$ for all $s$ is
+a \emph{pseudorandom generator} with expansion $\ell$ if for every $\PPT$
+distinguisher $\dist$ the \emph{distinguishing advantage}
+\[
+  \Adv^{\prg}_{G,\dist}(\secp)
+  \;\coloneqq\;
+  \Bigl\lvert
+     \Pr_{s \getsr \bit^{\secp}}\!\bigl[\dist(G(s)) = 1\bigr]
+     \;-\;
+     \Pr_{r \getsr \bit^{\ell(\secp)}}\!\bigl[\dist(r) = 1\bigr]
+  \Bigr\rvert
+\]
+is negligible in $\secp$. Both probabilities are additionally over the internal
+randomness of $\dist$.
+\end{definition}
+
+The seed length $\secp$ is exactly the security parameter, so a uniform seed is
+an $\secp$-bit string and its image is an $\ell(\secp)$-bit string; the gap
+$\ell(\secp) - \secp$ is the number of bits by which $G$ ``stretches'' its input.
+It is precisely this stretch that makes the definition nontrivial: were
+$\ell(\secp) = \secp$, the identity function would satisfy
+Definition~\ref{def:prg}.
+
+\subsection{Private-key encryption and eavesdropping security}
+
+A \emph{private-key encryption scheme} is a triple
+$\Pron = (\Gen, \Enc, \Dec)$ of $\PPT$ algorithms with an associated message
+space $\{\mathcal{M}_\secp\}_\secp$, satisfying the usual correctness condition:
+for every $\secp$, every key $k$ in the support of $\Gen(1^\secp)$, and every
+$m \in \mathcal{M}_\secp$, we have $\Dec_k(\Enc_k(m)) = m$ with probability $1$.
+
+We adopt the standard indistinguishability formulation of eavesdropping
+security. For a scheme $\Pron$, an adversary $\adv$, and a value $\secp$, define
+the experiment $\PrivK^{\eav}_{\adv,\Pron}(\secp)$ as follows.
+
+\begin{enumerate}
+  \item $\adv(1^\secp)$ outputs a pair of messages
+        $m_0, m_1 \in \mathcal{M}_\secp$ with $\abs{m_0} = \abs{m_1}$.
+  \item A key is generated, $k \leftarrow \Gen(1^\secp)$, a challenge bit is
+        chosen, $b \getsr \bit$, and the \emph{challenge ciphertext}
+        $c \leftarrow \Enc_k(m_b)$ is computed and handed to $\adv$.
+  \item $\adv$ outputs a bit $b'$. The experiment \emph{evaluates to $1$}
+        (``$\adv$ succeeds'') if $b' = b$, and to $0$ otherwise.
+\end{enumerate}
+
+\begin{definition}[Indistinguishable encryptions under eavesdropping]
+\label{def:eav}
+$\Pron$ has \emph{indistinguishable encryptions in the presence of an
+eavesdropper}, or is \emph{$\eav$-secure}, if for every $\PPT$ adversary $\adv$
+the \emph{eavesdropping advantage}
+\[
+  \Adv^{\eav}_{\Pron,\adv}(\secp)
+  \;\coloneqq\;
+  \Pr\!\bigl[\PrivK^{\eav}_{\adv,\Pron}(\secp) = 1\bigr] - \tfrac{1}{2}
+\]
+is negligible in $\secp$.
+\end{definition}
+
+The subtracted $1/2$ is the success probability of the trivial adversary that
+ignores $c$ and guesses; $\eav$-security asks that no efficient strategy beat
+this baseline by a non-negligible margin. We record for later use the
+information-theoretic gold standard against which the computational notion is
+calibrated.
+
+\begin{definition}[Perfect secrecy]\label{def:perfect}
+$\Pron$ is \emph{perfectly secret} if for every $\secp$, every adversary $\adv$
+whatsoever (of arbitrary computational power), and the experiment above,
+$\Pr[\PrivK^{\eav}_{\adv,\Pron}(\secp)=1] = \tfrac12$ exactly.
+\end{definition}
+
+The relevant instance is Vernam's one-time pad, whose perfect secrecy we invoke
+as a lemma.
+
+\begin{lemma}[One-time pad]\label{lem:otp}
+Fix $\secp$ and let $L \coloneqq \ell(\secp)$. Let $\Ptilde$ denote the scheme
+with message space $\bit^{L}$ in which $\Gen$ outputs a uniform pad
+$p \getsr \bit^{L}$ and $\Enc_p(m) = p \oplus m$. Then $\Ptilde$ is perfectly
+secret; in particular
+$\Pr[\PrivK^{\eav}_{\adv,\Ptilde}(\secp) = 1] = \tfrac{1}{2}$ for every $\adv$.
+\end{lemma}
+
+\begin{proof}
+Condition on any fixed messages $m_0, m_1 \in \bit^{L}$ output by $\adv$ and on
+any fixed challenge bit $b$. Because $p$ is uniform on $\bit^{L}$ and independent
+of $b$, and $x \mapsto x \oplus m_b$ is a bijection of $\bit^{L}$, the challenge
+$c = p \oplus m_b$ is uniform on $\bit^{L}$; crucially, its distribution does not
+depend on $b$. Hence the view of $\adv$ is statistically independent of $b$, and
+$\adv$'s output $b'$ is independent of $b$. Averaging over the uniform choice of
+$b \in \bit$ gives $\Pr[b' = b] = \tfrac12$.
+\end{proof}
+
+%==============================================================
+\section{The construction and the theorem}
+%==============================================================
+
+\begin{construction}[Fixed-length stream cipher]\label{con:cipher}
+Let $G$ be a deterministic polynomial-time function with expansion $\ell$. Define
+$\Pron = (\Gen, \Enc, \Dec)$ over the message space
+$\mathcal{M}_\secp = \bit^{\ell(\secp)}$ by
+\[
+  \Gen(1^\secp)\colon\ k \getsr \bit^{\secp};
+  \qquad
+  \Enc_k(m) = G(k) \oplus m;
+  \qquad
+  \Dec_k(c) = G(k) \oplus c .
+\]
+\end{construction}
+
+Correctness is immediate:
+$\Dec_k(\Enc_k(m)) = G(k) \oplus (G(k) \oplus m) = m$. The scheme is the standard
+(synchronous, fixed-output-length) stream cipher: the generator expands a short
+key into a long \emph{keystream} $G(k)$, and encryption is XOR of the plaintext
+with the keystream, exactly as in the one-time pad but with a pseudorandom pad in
+place of a truly random one. The key is $\secp$ bits while the message is
+$\ell(\secp) > \secp$ bits, so---unlike the one-time pad---the scheme encrypts
+messages longer than its key.
+
+\begin{theorem}\label{thm:main}
+If $G$ is a pseudorandom generator with expansion $\ell$, then the scheme
+$\Pron$ of Construction~\ref{con:cipher} has indistinguishable encryptions in the
+presence of an eavesdropper (Definition~\ref{def:eav}). Quantitatively, for every
+$\PPT$ eavesdropper $\adv$ there is a $\PPT$ distinguisher $\dist$, running in
+time $t_\adv + O(\ell(\secp))$ where $t_\adv$ is the running time of $\adv$, such
+that
+\begin{equation}\label{eq:tight}
+  \Adv^{\eav}_{\Pron,\adv}(\secp)
+  \;\leq\;
+  \Adv^{\prg}_{G,\dist}(\secp)
+  \qquad\text{for all } \secp .
+\end{equation}
+\end{theorem}
+
+The asymptotic statement follows from the concrete
+bound~\eqref{eq:tight}: the right-hand side is negligible because $G$ is a PRG,
+hence so is the left-hand side. We therefore prove the quantitative form.
+
+%==============================================================
+\section{Proof of Theorem~\ref{thm:main}}
+%==============================================================
+
+\paragraph{Strategy.} We exhibit a single distinguisher $\dist$ that turns any
+eavesdropper $\adv$ into an attack on $G$. The distinguisher receives a
+challenge string $w \in \bit^{\ell(\secp)}$, promised to be either $G(s)$ for a
+uniform seed $s$ or a uniform string $r$, and it must decide which. It does so by
+\emph{using $w$ as the keystream} in a simulated run of the eavesdropping
+experiment against $\adv$, and betting that $w$ is pseudorandom exactly when
+$\adv$ wins the simulated experiment. The two horns of the PRG promise then
+correspond to the two schemes $\Pron$ (real keystream) and $\Ptilde$ (random
+pad, i.e.\ the one-time pad of Lemma~\ref{lem:otp}), and the reduction reads off
+the theorem by comparing $\adv$'s success in each.
+
+\begin{algorithm}[t]
+\caption{Distinguisher $\dist$ against $G$, with black-box access to eavesdropper $\adv$}
+\label{alg:dist}
+\begin{algorithmic}[1]
+\Require challenge string $w \in \bit^{\ell(\secp)}$ (equal to $G(s)$ or to uniform $r$)
+\State $(m_0, m_1) \leftarrow \adv(1^\secp)$
+       \Comment{obtain the challenge messages, $\abs{m_0}=\abs{m_1}=\ell(\secp)$}
+\State $b \getsr \bit$
+       \Comment{internal challenge bit, chosen by $\dist$}
+\State $c \gets w \oplus m_b$
+       \Comment{use the challenge string \emph{as the keystream}}
+\State $b' \leftarrow \adv(c)$
+       \Comment{deliver the simulated challenge ciphertext}
+\If{$b' = b$}
+    \State \Return $1$ \Comment{guess ``$w$ is pseudorandom''}
+\Else
+    \State \Return $0$ \Comment{guess ``$w$ is uniform''}
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+The distinguisher is displayed as Algorithm~\ref{alg:dist}. It is a $\PPT$
+machine: it runs $\adv$ once, performs one XOR of two $\ell(\secp)$-bit strings,
+and one bit comparison, so its running time is $t_\adv + O(\ell(\secp))$ as
+claimed. We now analyze $\dist$ under each of the two input distributions of
+Definition~\ref{def:prg}.
+
+\paragraph{Case 1: $w = G(s)$ for $s \getsr \bit^{\secp}$.} We claim the view
+$\dist$ presents to $\adv$ is \emph{identically distributed} to $\adv$'s view in
+the real experiment $\PrivK^{\eav}_{\adv,\Pron}(\secp)$. Indeed, in that
+experiment the key is $k \getsr \bit^{\secp}$ and the challenge ciphertext is
+$\Enc_k(m_b) = G(k) \oplus m_b$; in the simulation the ``key'' is the uniform
+seed $s$ underlying $w = G(s)$, and the challenge ciphertext is
+$w \oplus m_b = G(s) \oplus m_b$. Since $s$ and $k$ are both uniform on
+$\bit^{\secp}$ and $\dist$ chooses $b$ exactly as the experiment does, the joint
+distribution of $(m_0, m_1, b, c)$---and hence of $\adv$'s output $b'$---is the
+same in both. By construction $\dist$ outputs $1$ iff $b' = b$, i.e.\ iff the
+simulated experiment evaluates to $1$. Therefore
+\begin{equation}\label{eq:case1}
+  \Pr_{s \getsr \bit^{\secp}}\!\bigl[\dist(G(s)) = 1\bigr]
+  \;=\;
+  \Pr\!\bigl[\PrivK^{\eav}_{\adv,\Pron}(\secp) = 1\bigr] .
+\end{equation}
+
+\paragraph{Case 2: $w = r$ for $r \getsr \bit^{\ell(\secp)}$.} Now the challenge
+ciphertext handed to $\adv$ is $c = r \oplus m_b$ with $r$ uniform on
+$\bit^{\ell(\secp)}$ and independent of $b$. This is exactly the challenge
+produced in the eavesdropping experiment against the one-time pad $\Ptilde$ of
+Lemma~\ref{lem:otp} (whose message space is $\bit^{\ell(\secp)}$ and whose
+``key'' is a uniform pad). Since $\dist$ again outputs $1$ iff $\adv$ succeeds,
+\[
+  \Pr_{r \getsr \bit^{\ell(\secp)}}\!\bigl[\dist(r) = 1\bigr]
+  \;=\;
+  \Pr\!\bigl[\PrivK^{\eav}_{\adv,\Ptilde}(\secp) = 1\bigr]
+  \;=\; \tfrac{1}{2},
+\]
+the last equality by Lemma~\ref{lem:otp}. Note this holds for the very same $\adv$
+and the very same reduction; the perfect secrecy of $\Ptilde$ pins the second
+probability to $1/2$ irrespective of $\adv$'s strategy.
+
+\paragraph{Combining.} Subtracting the two cases and using that the left-hand
+sides differ by at most the distinguishing advantage,
+\begin{align*}
+  \Adv^{\eav}_{\Pron,\adv}(\secp)
+  &= \Pr\!\bigl[\PrivK^{\eav}_{\adv,\Pron}(\secp) = 1\bigr] - \tfrac12 \\
+  &= \Pr_{s}\!\bigl[\dist(G(s)) = 1\bigr]
+     - \Pr_{r}\!\bigl[\dist(r) = 1\bigr]
+     && \text{(by \eqref{eq:case1} and Case 2)} \\
+  &\leq \Bigl\lvert
+        \Pr_{s}\!\bigl[\dist(G(s)) = 1\bigr]
+        - \Pr_{r}\!\bigl[\dist(r) = 1\bigr]
+        \Bigr\rvert
+     \;=\; \Adv^{\prg}_{G,\dist}(\secp).
+\end{align*}
+This is exactly~\eqref{eq:tight}. Since $G$ is a PRG and $\dist$ is $\PPT$, the
+right-hand side is negligible; being nonnegative and bounded above by a
+negligible function, $\Adv^{\eav}_{\Pron,\adv}(\secp)$ is negligible. As $\adv$
+was an arbitrary $\PPT$ eavesdropper, $\Pron$ is $\eav$-secure. \qed
+
+%==============================================================
+\section{Remarks}
+%==============================================================
+
+\begin{remark}[The hybrid, made explicit]
+The proof is a two-point hybrid argument in disguise. Define
+$H_0$ to be $\adv$'s success probability against the real scheme $\Pron$ and
+$H_1$ its success probability against the idealized scheme $\Ptilde$ that XORs
+with a truly random pad. Lemma~\ref{lem:otp} evaluates the ideal endpoint
+exactly, $H_1 = \tfrac12$, using no computational assumption; the single
+distinguisher of Algorithm~\ref{alg:dist} bounds the gap $\abs{H_0 - H_1}$ by the
+PRG advantage. All computational content is thus localized to the one step where
+$G(k)$ is swapped for a uniform string, which is the only place the assumption is
+used and the only source of the (negligible) security loss.
+\end{remark}
+
+\begin{remark}[Tightness]
+The reduction is advantage-preserving and rewinding-free: the bound
+\eqref{eq:tight} carries a multiplicative constant of exactly $1$ and additive
+loss $0$, and $\dist$ invokes $\adv$ a single time with essentially no overhead
+beyond one $\ell(\secp)$-bit XOR. Consequently the cipher inherits the concrete
+security of $G$ verbatim: an adversary spending work $t$ and achieving
+eavesdropping advantage $\varepsilon$ yields a PRG distinguisher of work
+$\approx t$ and advantage $\geq \varepsilon$. No security is lost in passing from
+the primitive to the scheme.
+\end{remark}
+
+\begin{remark}[On necessity of the assumption]
+Sufficiency of pseudorandomness is what the theorem asserts; a converse also
+holds for this construction, so the assumption is not an artifact of the proof.
+If $G$ fails Definition~\ref{def:prg}, witnessed by a $\PPT$ $\dist$ with
+non-negligible $\Adv^{\prg}_{G,\dist}$, then $\Pron$ fails
+Definition~\ref{def:eav}: the eavesdropper submits $m_0 = 0^{\ell(\secp)}$ and a
+uniformly random $m_1$, and on receiving $c$ runs $\dist$ on $c \oplus m_0 = c$,
+guessing $b'=0$ when $\dist$ answers ``pseudorandom.'' When $b=0$ the string fed
+to $\dist$ is $G(k)$; when $b=1$ it is $G(k)\oplus m_1$, uniform and independent
+of $G(k)$ because $m_1$ is a fresh uniform pad, so it is distributed as a truly
+random string. The eavesdropper's advantage is thus $\tfrac12\Adv^{\prg}_{G,\dist}$,
+non-negligible. Hence, for this scheme, $\eav$-security and pseudorandomness of
+$G$ are equivalent.
+\end{remark}
+
+\begin{remark}[Scope: single message only]
+Definition~\ref{def:eav} models a \emph{single} ciphertext. The theorem does
+\emph{not} certify the stateless scheme of Construction~\ref{con:cipher} under
+multiple encryptions with a fixed key: two messages encrypted under the same
+$k$ produce $c_1 \oplus c_2 = m_1 \oplus m_2$, leaking the plaintext XOR and
+breaking any reasonable multi-message notion---precisely the two-time-pad
+failure. Security across many messages is recovered either by making the
+generator stateful (advancing the keystream so that disjoint keystream segments
+encrypt successive messages, as in a synchronized stream cipher) or by moving to
+a randomized/nonce-based construction from a pseudorandom \emph{function}. Each
+requires its own definition (e.g.\ multiple-encryption or CPA indistinguishability)
+and its own reduction; neither is subsumed by Theorem~\ref{thm:main}.
+\end{remark}
+
+\begin{remark}[Uniform vs.\ non-uniform adversaries]
+The argument is agnostic to the adversary model. Read with $\PPT$ meaning
+uniform probabilistic polynomial time, it establishes security against uniform
+eavesdroppers from security of $G$ against uniform distinguishers; read with
+$\dist$ and $\adv$ as polynomial-size circuit families and ``negligible'' quantified
+accordingly, the identical reduction establishes the non-uniform statement, since
+$\dist$ merely wraps $\adv$ with a fixed amount of extra computation and no
+additional nonuniform advice.
+\end{remark}
+
+\end{document}
