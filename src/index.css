@@ -60,6 +60,147 @@ body {
   color: #b4becf;
 }
 
+/* ── Print / PDF export ─────────────────────────────────────────────────────
+   The print sheet is mounted only while printing. On screen it's parked far
+   off-canvas rather than display:none so it is fully laid out (KaTeX inside
+   <foreignObject> needs real layout) before the print dialog opens. */
+.print-sheet {
+  position: fixed;
+  left: -100000px;
+  top: 0;
+  width: 920px;
+}
+
+@media print {
+  @page {
+    margin: 14mm;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+  }
+
+  /* The app chrome never prints; the sheet joins normal flow. */
+  .print-hide {
+    display: none !important;
+  }
+  .print-sheet {
+    position: static;
+    left: auto;
+    width: auto;
+  }
+
+  .print-page {
+    break-after: page;
+    page-break-after: always;
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  .print-page:last-child {
+    break-after: auto;
+    page-break-after: auto;
+  }
+
+  /* Prose prints dark on white. Scoped to .print-text so it can't override the
+     light label colors inside the diagram, which sits on its own dark surface. */
+  .print-text,
+  .print-text * {
+    color: #111827 !important;
+  }
+
+  /* Diagram colors are content (SVG fills), so they survive without the user
+     enabling "background graphics" — this just discourages any recoloring. */
+  .print-page svg {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .print-head {
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #d1d5db;
+  }
+  .print-head h1 {
+    margin: 0;
+    font-size: 20pt;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+  .print-subtitle {
+    margin: 3px 0 0;
+    font-size: 10pt;
+  }
+  .print-theorem {
+    margin: 9px 0 0;
+    font-size: 10pt;
+    line-height: 1.5;
+  }
+
+  .print-kicker {
+    font-size: 7.5pt;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-right: 5px;
+  }
+
+  .print-step-head {
+    margin-bottom: 8px;
+  }
+  .print-step-head h2 {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin: 0;
+    font-size: 14pt;
+    font-weight: 600;
+  }
+  .print-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9pt;
+    font-weight: 700;
+    border: 1px solid #9ca3af;
+    border-radius: 4px;
+    padding: 1px 5px;
+  }
+  .print-tag {
+    margin: 2px 0 0 32px;
+    font-size: 8pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .print-note {
+    margin: 6px 0 0;
+    font-size: 9pt;
+    font-style: italic;
+    text-align: center;
+  }
+
+  .print-narr {
+    margin-top: 12px;
+    font-size: 10pt;
+    line-height: 1.55;
+  }
+  .print-narr p {
+    margin: 0 0 8px;
+  }
+  .print-claim {
+    margin-top: 12px !important;
+    padding: 6px 0 6px 10px;
+    border-left: 3px solid #4b5563;
+  }
+
+  .print-foot {
+    margin-top: 14px;
+    padding-top: 6px;
+    border-top: 1px solid #e5e7eb;
+    font-size: 8pt;
+  }
+}
+
 .scroll-thin::-webkit-scrollbar {
   width: 8px;
   height: 8px;
