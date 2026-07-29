@@ -3,6 +3,7 @@ import { Layers, Keyboard, ChevronRight } from 'lucide-react';
 import { streamCipherProof } from './proof';
 import ReductionDiagram from './ReductionDiagram';
 import StepPanel from './StepPanel';
+import { renderRichText } from './richText';
 
 export default function App() {
   const proof = streamCipherProof;
@@ -88,7 +89,7 @@ export default function App() {
             <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-amber2-400 bg-amber2-500/10 border border-amber2-500/25 rounded px-1.5 py-0.5 shrink-0">
               Theorem
             </span>
-            <p className="text-sm text-ink-300 leading-relaxed">{proof.theorem}</p>
+            <p className="text-sm text-ink-300 leading-relaxed">{renderRichText(proof.theorem)}</p>
           </div>
         </div>
       </div>
@@ -174,7 +175,6 @@ export default function App() {
           <section className="order-3">
             <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden h-full sticky top-[88px]">
               <StepPanel
-                proof={proof}
                 step={step}
                 index={index}
                 total={total}

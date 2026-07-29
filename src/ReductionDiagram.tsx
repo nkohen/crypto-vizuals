@@ -1,10 +1,63 @@
 import { useMemo } from 'react';
+import type { ReactNode } from 'react';
 import type { Arrow, BaseEntity, EntityRole } from './types';
+import { renderRichText } from './richText';
 
 interface Props {
   entities: BaseEntity[];
   arrows: Arrow[];
   note?: string;
+}
+
+/**
+ * Renders LaTeX/rich text centered at an SVG coordinate via <foreignObject>, so
+ * KaTeX typesetting can live inside the diagram. The box is centered on (cx, cy)
+ * and generously sized; flex-centering keeps content centered regardless of its
+ * measured width, and overflow is left visible so wide labels are never clipped.
+ */
+function SvgLabel({
+  cx,
+  cy,
+  width,
+  height,
+  fontSize,
+  color,
+  children,
+}: {
+  cx: number;
+  cy: number;
+  width: number;
+  height: number;
+  fontSize: number;
+  color: string;
+  children: ReactNode;
+}) {
+  return (
+    <foreignObject
+      x={cx - width / 2}
+      y={cy - height / 2}
+      width={width}
+      height={height}
+      style={{ overflow: 'visible', pointerEvents: 'none' }}
+    >
+      <div
+        style={{
+          width,
+          height,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color,
+          fontSize,
+          lineHeight: 1.1,
+        }}
+      >
+        {/* Single inline wrapper: keeps fragments in normal inline flow so the
+            spaces between text and math aren't trimmed as flex-item edges. */}
+        <span style={{ whiteSpace: 'nowrap' }}>{children}</span>
+      </div>
+    </foreignObject>
+  );
 }
 
 const W = 880;
@@ -71,8 +124,6 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
   const sorted = useMemo(() => {
     const arr = [...entities];
     arr.sort((a, b) => {
-      const ap = a.parent ? 1 : 0;
-      const bp = b.parent ? 1 : 0;
       if (a.id === b.parent) return -1;
       if (b.id === a.parent) return 1;
       // Larger boxes (parents) first by area.
@@ -140,23 +191,27 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
             const toE = Array.isArray(ar.to) ? null : idMap.get(ar.to);
             const fp = getPoint(ar.from, idMap);
             const tp = getPoint(ar.to, idMap);
-            // Anchor to perimeter for entity refs.
-            const sx = fromE ? anchorPoint(fromE, tp.x, tp.y).x : fp.x;
-            const sy = fromE ? anchorPoint(fromE, tp.x, tp.y).y : fp.y;
-            const ex = toE ? anchorPoint(toE, sx, sy).x : tp.x;
-            const ey = toE ? anchorPoint(toE, sx, sy).y : tp.y;
 
-            const mx = (sx + ex) / 2;
-            const my = (sy + ey) / 2;
+            // Control point is derived from the center-to-center line so that each
+            // arrow's curve is independent of where it ends up anchoring.
+            const mx = (fp.x + tp.x) / 2;
+            const my = (fp.y + tp.y) / 2;
             const curve = ar.curve ?? 0;
-            // perpendicular offset for curve control point
-            const dx = ex - sx;
-            const dy = ey - sy;
+            const dx = tp.x - fp.x;
+            const dy = tp.y - fp.y;
             const len = Math.hypot(dx, dy) || 1;
             const nx = -dy / len;
             const ny = dx / len;
             const cx = mx + nx * curve;
             const cy = my + ny * curve;
+
+            // Anchor each endpoint toward the control point (not the far center), so
+            // parallel arrows between the same two boxes leave/arrive at distinct
+            // points on the perimeter and line up with the curve's tangent.
+            const sx = fromE ? anchorPoint(fromE, cx, cy).x : fp.x;
+            const sy = fromE ? anchorPoint(fromE, cx, cy).y : fp.y;
+            const ex = toE ? anchorPoint(toE, cx, cy).x : tp.x;
+            const ey = toE ? anchorPoint(toE, cx, cy).y : tp.y;
             const path = `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
 
             const active = ar.active !== false;
@@ -181,17 +236,39 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
                   style={{ transition: 'opacity 0.4s, stroke 0.4s' }}
                 />
                 {ar.label && (
-                  <text
-                    x={lx}
-                    y={ly}
-                    textAnchor="middle"
-                    fontSize="12"
-                    fill={active ? '#b4becf' : '#5a6c8c'}
-                    className="font-mono"
-                    style={{ transition: 'fill 0.4s' }}
+                  <foreignObject
+                    x={lx - 150}
+                    y={ly - 13}
+                    width={300}
+                    height={24}
+                    style={{ overflow: 'visible', pointerEvents: 'none' }}
+                    opacity={active ? 1 : 0.55}
                   >
-                    {ar.label}
-                  </text>
+                    <div
+                      style={{
+                        width: 300,
+                        height: 24,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                      }}
+                    >
+                      {/* backing plate keeps the label legible over lines and box edges */}
+                      <span
+                        style={{
+                          background: 'rgba(11,16,24,0.85)',
+                          borderRadius: 5,
+                          padding: '1px 5px',
+                          color: active ? '#b4becf' : '#5a6c8c',
+                          fontSize: 12,
+                          lineHeight: 1.2,
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {renderRichText(ar.label)}
+                      </span>
+                    </div>
+                  </foreignObject>
                 )}
               </g>
             );
@@ -221,18 +298,16 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
                       filter={isActive ? 'url(#glow)' : undefined}
                       style={{ transition: 'stroke 0.4s' }}
                     />
-                    <text
-                      x={b.x + b.w / 2}
-                      y={b.y + b.h / 2}
-                      textAnchor="middle"
-                      dominantBaseline="central"
-                      fontSize={e.kind === 'call' ? 22 : 16}
-                      fontWeight={600}
-                      fill={s.text}
-                      className="font-mono"
+                    <SvgLabel
+                      cx={b.x + b.w / 2}
+                      cy={b.y + b.h / 2}
+                      width={b.w + 44}
+                      height={b.h}
+                      fontSize={e.kind === 'call' ? 20 : 15}
+                      color={s.text}
                     >
-                      {e.label}
-                    </text>
+                      {renderRichText(e.label)}
+                    </SvgLabel>
                   </>
                 ) : (
                   <>
@@ -262,16 +337,18 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
                       {e.label}
                     </text>
                     {e.caption && (
-                      <text
-                        x={b.x + b.w / 2}
-                        y={b.y + b.h / 2 + (b.h > 80 ? 10 : 4)}
-                        textAnchor="middle"
-                        fontSize="11"
-                        fill="#8492ad"
-                        className="font-mono"
+                      <SvgLabel
+                        // Tall container boxes hold nested entities, so their caption sits
+                        // just below the header strip rather than in the (occupied) center.
+                        cx={b.x + b.w / 2}
+                        cy={b.h >= 170 ? b.y + 40 : b.y + b.h / 2 + (b.h > 80 ? 8 : 2)}
+                        width={b.w + 80}
+                        height={20}
+                        fontSize={11}
+                        color="#8492ad"
                       >
-                        {e.caption}
-                      </text>
+                        {renderRichText(e.caption)}
+                      </SvgLabel>
                     )}
                   </>
                 )}

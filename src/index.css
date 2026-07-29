@@ -28,6 +28,26 @@ body {
   margin-top: 0.7rem;
 }
 
+/* Keep inline KaTeX proportional to body text and inheriting its color. */
+.katex {
+  font-size: 1.02em;
+  color: inherit;
+}
+.katex-inline {
+  white-space: nowrap;
+}
+/* $$display$$ used inline in prose: center it on its own line. */
+.katex-display-inline {
+  display: block;
+  margin: 0.55rem 0;
+  text-align: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.katex-display-inline .katex {
+  font-size: 1em;
+}
+
 .kbd {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem;
