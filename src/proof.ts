@@ -6,6 +6,7 @@ import type { Proof } from './types';
 export const streamCipherProof: Proof = {
   id: 'prg-stream-cipher',
   title: 'Stream Cipher Security from PRG Security',
+  tabLabel: 'Single Reduction',
   subtitle:
     'A reduction proof: if a pseudorandom generator G is secure, then the stream cipher built from G is EAV-secure.',
   theorem:
