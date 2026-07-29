@@ -1,4 +1,4 @@
-import type { Dispatch, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import {
   Plus,
   Copy,
@@ -13,7 +13,7 @@ import {
 import type { SceneModel, SceneStep } from '../types';
 import { renderRichText } from '../richText';
 import { uid } from '../scene';
-import type { SceneAction } from './sceneReducer';
+import type { EditorDispatch } from './history';
 import type { Tool } from './editorTypes';
 
 interface Props {
@@ -21,7 +21,7 @@ interface Props {
   step: SceneStep;
   stepIndex: number;
   onSelectStep: (id: string) => void;
-  dispatch: Dispatch<SceneAction>;
+  dispatch: EditorDispatch;
   tool: Tool;
   onToolChange: (t: Tool) => void;
 }
@@ -42,9 +42,12 @@ export default function StepsPanel({
 }: Props) {
   const total = scene.steps.length;
 
-  const patch = (p: Partial<Omit<SceneStep, 'id'>>) => dispatch({ type: 'updateStep', id: step.id, patch: p });
+  // mergeKey names the field, so typing collapses into one undo step.
+  const patch = (p: Partial<Omit<SceneStep, 'id'>>, mergeKey?: string) =>
+    dispatch({ type: 'updateStep', id: step.id, patch: p, mergeKey });
 
-  const setNarration = (next: string[]) => patch({ narration: next.length ? next : [''] });
+  const setNarration = (next: string[], mergeKey?: string) =>
+    patch({ narration: next.length ? next : [''] }, mergeKey);
 
   const addStep = () => {
     const id = uid('step');
@@ -139,14 +142,14 @@ export default function StepsPanel({
 
           <div className="grid sm:grid-cols-[1fr_150px] gap-3">
             <Field label="Title">
-              <input className={inputCls} value={step.title} onChange={(e) => patch({ title: e.target.value })} />
+              <input className={inputCls} value={step.title} onChange={(e) => patch({ title: e.target.value }, `step-title:${step.id}`)} />
             </Field>
             <Field label="Tag">
               <input
                 className={inputCls}
                 placeholder="e.g. Setup"
                 value={step.tag}
-                onChange={(e) => patch({ tag: e.target.value })}
+                onChange={(e) => patch({ tag: e.target.value }, `step-tag:${step.id}`)}
               />
             </Field>
           </div>
@@ -159,7 +162,7 @@ export default function StepsPanel({
                     className={inputCls}
                     rows={2}
                     value={para}
-                    onChange={(e) => setNarration(step.narration.map((p, j) => (j === i ? e.target.value : p)))}
+                    onChange={(e) => setNarration(step.narration.map((p, j) => (j === i ? e.target.value : p)), `narration:${step.id}:${i}`)}
                   />
                   {step.narration.length > 1 && (
                     <button
@@ -191,7 +194,7 @@ export default function StepsPanel({
           </Field>
 
           <Field label="Claim">
-            <input className={inputCls} value={step.claim} onChange={(e) => patch({ claim: e.target.value })} />
+            <input className={inputCls} value={step.claim} onChange={(e) => patch({ claim: e.target.value }, `step-claim:${step.id}`)} />
             {step.claim ? <Preview>{renderRichText(step.claim)}</Preview> : null}
           </Field>
 
@@ -199,7 +202,7 @@ export default function StepsPanel({
             <input
               className={inputCls}
               value={step.diagramNote ?? ''}
-              onChange={(e) => patch({ diagramNote: e.target.value || undefined })}
+              onChange={(e) => patch({ diagramNote: e.target.value || undefined }, `step-note:${step.id}`)}
             />
           </Field>
         </div>

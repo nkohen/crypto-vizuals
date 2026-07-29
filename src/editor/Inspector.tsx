@@ -1,11 +1,11 @@
 import { Trash2, Undo2, CopyCheck, Move } from 'lucide-react';
-import type { Dispatch, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import type { EntityKind, EntityOverride, EntityRole, SceneModel, SceneStep } from '../types';
 import { renderRichText } from '../richText';
 import { entityBounds } from '../diagram/geometry';
 import { roleLabels } from '../diagram/style';
 import { effectiveEntity, overriddenFields } from '../scene';
-import type { SceneAction } from './sceneReducer';
+import type { EditorDispatch } from './history';
 import type { EditScope, Selection } from './editorTypes';
 
 const ROLES: EntityRole[] = [
@@ -26,7 +26,7 @@ interface Props {
   step: SceneStep;
   editScope: EditScope;
   selection: Selection;
-  dispatch: Dispatch<SceneAction>;
+  dispatch: EditorDispatch;
   onSelect: (s: Selection) => void;
 }
 
@@ -41,18 +41,23 @@ export default function Inspector({ scene, step, editScope, selection, dispatch,
   const stepScope = editScope === 'step';
   const scopeNote = stepScope ? ' (this step)' : '';
 
-  /** Route an overridable edit to whichever layer the scope is editing. */
+  /**
+   * Route an overridable edit to whichever layer the scope is editing. The
+   * mergeKey names the field being edited, so a burst of typing collapses into
+   * one undo step but switching fields starts a new one.
+   */
   const setField = (patch: EntityOverride) => {
     if (!entity) return;
+    const mergeKey = `field:${Object.keys(patch).join(',')}:${entity.id}:${editScope}`;
     if (stepScope) {
-      dispatch({ type: 'setStepOverride', stepId: step.id, entityId: entity.id, patch });
+      dispatch({ type: 'setStepOverride', stepId: step.id, entityId: entity.id, patch, mergeKey });
       return;
     }
     if (patch.w !== undefined || patch.h !== undefined) {
       const b = entityBounds(entity);
-      dispatch({ type: 'resizeEntity', id: entity.id, w: patch.w ?? b.w, h: patch.h ?? b.h });
+      dispatch({ type: 'resizeEntity', id: entity.id, w: patch.w ?? b.w, h: patch.h ?? b.h, mergeKey });
     } else {
-      dispatch({ type: 'updateEntity', id: entity.id, patch });
+      dispatch({ type: 'updateEntity', id: entity.id, patch, mergeKey });
     }
   };
 
@@ -150,7 +155,7 @@ export default function Inspector({ scene, step, editScope, selection, dispatch,
         {arrow && (
           <>
             <Field label="Label (supports $LaTeX$)">
-              <input className={inputCls} value={arrow.label ?? ''} onChange={(e) => dispatch({ type: 'updateArrow', id: arrow.id, patch: { label: e.target.value } })} />
+              <input className={inputCls} value={arrow.label ?? ''} onChange={(e) => dispatch({ type: 'updateArrow', id: arrow.id, patch: { label: e.target.value }, mergeKey: `arrow-label:${arrow.id}` })} />
               {arrow.label ? <Preview>{renderRichText(arrow.label)}</Preview> : null}
             </Field>
 
@@ -164,7 +169,7 @@ export default function Inspector({ scene, step, editScope, selection, dispatch,
             </label>
 
             <Field label={`Curve (${arrow.curve ?? 0})`}>
-              <input type="range" min={-150} max={150} value={arrow.curve ?? 0} onChange={(e) => dispatch({ type: 'updateArrow', id: arrow.id, patch: { curve: Number(e.target.value) } })} className="w-full" />
+              <input type="range" min={-150} max={150} value={arrow.curve ?? 0} onChange={(e) => dispatch({ type: 'updateArrow', id: arrow.id, patch: { curve: Number(e.target.value) }, mergeKey: `curve:${arrow.id}` })} className="w-full" />
             </Field>
 
             <DeleteBtn label="Delete arrow" onClick={() => { dispatch({ type: 'deleteArrow', id: arrow.id }); onSelect(null); }} />
@@ -174,21 +179,21 @@ export default function Inspector({ scene, step, editScope, selection, dispatch,
         {!entity && !arrow && (
           <>
             <Field label="Title">
-              <input className={inputCls} value={scene.title} onChange={(e) => dispatch({ type: 'setMeta', patch: { title: e.target.value } })} />
+              <input className={inputCls} value={scene.title} onChange={(e) => dispatch({ type: 'setMeta', patch: { title: e.target.value }, mergeKey: 'meta:title' })} />
             </Field>
             <Field label="Tab label (viewer's example chip)">
               <input
                 className={inputCls}
                 placeholder={scene.title || 'defaults to the title'}
                 value={scene.tabLabel ?? ''}
-                onChange={(e) => dispatch({ type: 'setMeta', patch: { tabLabel: e.target.value || undefined } })}
+                onChange={(e) => dispatch({ type: 'setMeta', patch: { tabLabel: e.target.value || undefined }, mergeKey: 'meta:tabLabel' })}
               />
             </Field>
             <Field label="Subtitle">
-              <textarea className={inputCls} rows={2} value={scene.subtitle} onChange={(e) => dispatch({ type: 'setMeta', patch: { subtitle: e.target.value } })} />
+              <textarea className={inputCls} rows={2} value={scene.subtitle} onChange={(e) => dispatch({ type: 'setMeta', patch: { subtitle: e.target.value }, mergeKey: 'meta:subtitle' })} />
             </Field>
             <Field label="Theorem (supports $LaTeX$)">
-              <textarea className={inputCls} rows={4} value={scene.theorem} onChange={(e) => dispatch({ type: 'setMeta', patch: { theorem: e.target.value } })} />
+              <textarea className={inputCls} rows={4} value={scene.theorem} onChange={(e) => dispatch({ type: 'setMeta', patch: { theorem: e.target.value }, mergeKey: 'meta:theorem' })} />
               {scene.theorem ? <Preview>{renderRichText(scene.theorem)}</Preview> : null}
             </Field>
             <p className="text-xs text-ink-500 leading-relaxed">

@@ -1,6 +1,17 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { ChangeEvent, ReactNode } from 'react';
-import { Layers, Download, Upload, FilePlus, Eye, Image as ImageIcon, Printer, BookOpen } from 'lucide-react';
+import {
+  Layers,
+  Download,
+  Upload,
+  FilePlus,
+  Eye,
+  Image as ImageIcon,
+  Printer,
+  BookOpen,
+  Undo2,
+  Redo2,
+} from 'lucide-react';
 import type { EntityKind, EntityRole, Proof, SceneModel } from '../types';
 import { W, H } from '../diagram/geometry';
 import { blankScene, compileScene, makeEntity } from '../scene';
@@ -9,7 +20,7 @@ import { streamCipherProof } from '../proof';
 import { sequenceOfGamesProof } from '../gamesProof';
 import ModeToggle, { type AppMode } from '../ModeToggle';
 import ReductionDiagram from '../ReductionDiagram';
-import { sceneReducer } from './sceneReducer';
+import { canRedo, canUndo, historyReducer, initHistory } from './history';
 import EditorCanvas from './EditorCanvas';
 import Palette from './Palette';
 import Inspector from './Inspector';
@@ -28,7 +39,10 @@ interface Props {
 const EXAMPLES: Proof[] = [streamCipherProof, sequenceOfGamesProof];
 
 export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props) {
-  const [scene, dispatch] = useReducer(sceneReducer, undefined, () => loadStoredScene() ?? blankScene());
+  const [history, dispatch] = useReducer(historyReducer, undefined, () =>
+    initHistory(loadStoredScene() ?? blankScene()),
+  );
+  const scene = history.present;
   const [selection, setSelection] = useState<Selection>(null);
   const [tool, setTool] = useState<Tool>('select');
   const [activeStepId, setActiveStepId] = useState(() => scene.steps[0]?.id ?? '');
@@ -54,6 +68,20 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
   useEffect(() => {
     storeScene(scene);
   }, [scene]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!e.metaKey && !e.ctrlKey) return;
+      const key = e.key.toLowerCase();
+      if (key !== 'z' && key !== 'y') return;
+      // Text fields keep their own native undo stack.
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      e.preventDefault();
+      dispatch({ type: key === 'y' || e.shiftKey ? 'redo' : 'undo' });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   // Per-step layout is meaningless with a single step.
   useEffect(() => {
@@ -162,6 +190,23 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
           </div>
 
           <div className="flex items-center gap-2">
+            <ToolbarBtn
+              onClick={() => dispatch({ type: 'undo' })}
+              icon={<Undo2 size={14} />}
+              label="Undo"
+              title="Undo (Ctrl/Cmd+Z)"
+              disabled={!canUndo(history)}
+              iconOnly
+            />
+            <ToolbarBtn
+              onClick={() => dispatch({ type: 'redo' })}
+              icon={<Redo2 size={14} />}
+              label="Redo"
+              title="Redo (Ctrl/Cmd+Shift+Z)"
+              disabled={!canRedo(history)}
+              iconOnly
+            />
+            <span className="mx-0.5 h-5 w-px bg-ink-700/70" />
             <ToolbarBtn onClick={newScene} icon={<FilePlus size={14} />} label="New" />
             <div className="relative">
               <ToolbarBtn
@@ -374,6 +419,7 @@ function ToolbarBtn({
   primary,
   title,
   disabled,
+  iconOnly,
 }: {
   onClick: () => void;
   icon: ReactNode;
@@ -381,6 +427,8 @@ function ToolbarBtn({
   primary?: boolean;
   title?: string;
   disabled?: boolean;
+  /** Keep the label for assistive tech only; the toolbar is crowded. */
+  iconOnly?: boolean;
 }) {
   return (
     <button
@@ -395,7 +443,7 @@ function ToolbarBtn({
       }`}
     >
       {icon}
-      <span className="hidden sm:inline">{label}</span>
+      {!iconOnly && <span className="hidden sm:inline">{label}</span>}
     </button>
   );
 }

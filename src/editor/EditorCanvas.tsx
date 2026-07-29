@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Dispatch, PointerEvent as ReactPointerEvent } from 'react';
+import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { BaseEntity, SceneModel, SceneStep } from '../types';
 import { W, H, entityBounds, arrowPath, sortEntitiesForRender } from '../diagram/geometry';
 import DiagramDefs from '../diagram/DiagramDefs';
 import EntityNode from '../diagram/EntityNode';
 import ArrowShape from '../diagram/ArrowShape';
 import { effectiveEntity, hasOverride, uid } from '../scene';
-import type { SceneAction } from './sceneReducer';
+import type { EditorDispatch } from './history';
 import type { EditScope, Selection, Tool } from './editorTypes';
 
 interface Props {
@@ -17,7 +17,7 @@ interface Props {
   stepIndex: number;
   /** Whether drags edit base geometry or this step's override. */
   editScope: EditScope;
-  dispatch: Dispatch<SceneAction>;
+  dispatch: EditorDispatch;
   selection: Selection;
   onSelect: (sel: Selection) => void;
   tool: Tool;
@@ -174,18 +174,20 @@ export default function EditorCanvas({
     if (drag.mode === 'move') {
       const x = Math.round(drag.orig.x + dx);
       const y = Math.round(drag.orig.y + dy);
+      const mergeKey = `move:${drag.id}`;
       if (editScope === 'step') {
-        dispatch({ type: 'setStepOverride', stepId: step.id, entityId: drag.id, patch: { x, y } });
+        dispatch({ type: 'setStepOverride', stepId: step.id, entityId: drag.id, patch: { x, y }, mergeKey });
       } else {
-        dispatch({ type: 'moveEntity', id: drag.id, x, y });
+        dispatch({ type: 'moveEntity', id: drag.id, x, y, mergeKey });
       }
     } else {
       const w = Math.round(drag.orig.w + dx);
       const h = Math.round(drag.orig.h + dy);
+      const mergeKey = `size:${drag.id}`;
       if (editScope === 'step') {
-        dispatch({ type: 'setStepOverride', stepId: step.id, entityId: drag.id, patch: { w, h } });
+        dispatch({ type: 'setStepOverride', stepId: step.id, entityId: drag.id, patch: { w, h }, mergeKey });
       } else {
-        dispatch({ type: 'resizeEntity', id: drag.id, w, h });
+        dispatch({ type: 'resizeEntity', id: drag.id, w, h, mergeKey });
       }
     }
   }
@@ -198,6 +200,8 @@ export default function EditorCanvas({
         // Capture may never have been granted; ending the drag is what matters.
       }
       dragRef.current = null;
+      // Close the gesture so the next drag is its own undo step.
+      dispatch({ type: 'endGesture' });
     }
   }
 
