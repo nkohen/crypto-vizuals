@@ -26,7 +26,16 @@ import Palette from './Palette';
 import Inspector from './Inspector';
 import StepsPanel from './StepsPanel';
 import PrintSheet from './PrintSheet';
-import { downloadSceneJSON, downloadText, loadStoredScene, readSceneFile, slugify, storeScene } from './exporters';
+import {
+  downloadSceneJSON,
+  downloadText,
+  listStoredScenes,
+  loadStoredScene,
+  loadStoredSceneById,
+  readSceneFile,
+  slugify,
+  storeScene,
+} from './exporters';
 import type { EditScope, Selection, Tool } from './editorTypes';
 
 interface Props {
@@ -173,6 +182,16 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
     replaceScene(proofToScene(proof).scene);
   };
 
+  /** Reopen a scene from a previous session's autosave. */
+  const reopenStored = (id: string) => {
+    setShowExamples(false);
+    const stored = loadStoredSceneById(id);
+    if (stored) replaceScene(stored);
+  };
+
+  // Read on open rather than up front, so the list reflects the latest autosave.
+  const recent = showExamples ? listStoredScenes().filter((s) => s.id !== scene.id) : [];
+
   return (
     <>
     <div className="min-h-screen bg-ink-950 text-ink-100 flex flex-col print-hide">
@@ -219,7 +238,8 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
                 <>
                   {/* click-away target */}
                   <div className="fixed inset-0 z-30" onClick={() => setShowExamples(false)} />
-                  <div className="absolute right-0 z-40 mt-1 w-60 overflow-hidden rounded-lg border border-ink-600/70 bg-ink-850 shadow-xl">
+                  <div className="absolute right-0 z-40 mt-1 w-64 overflow-hidden rounded-lg border border-ink-600/70 bg-ink-850 shadow-xl">
+                    <MenuHeading>Worked examples</MenuHeading>
                     {EXAMPLES.map((p) => (
                       <button
                         key={p.id}
@@ -230,6 +250,21 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
                         <span className="block text-[10px] text-ink-500">{p.steps.length} steps · {p.title}</span>
                       </button>
                     ))}
+                    {recent.length > 0 && (
+                      <>
+                        <MenuHeading>Your recent scenes</MenuHeading>
+                        {recent.map((r) => (
+                          <button
+                            key={r.id}
+                            onClick={() => reopenStored(r.id)}
+                            className="block w-full px-3 py-2 text-left text-xs text-ink-200 transition hover:bg-ink-700/60"
+                          >
+                            <span className="block font-medium truncate">{r.title || 'Untitled'}</span>
+                            <span className="block text-[10px] text-ink-500">{r.steps} steps · autosaved</span>
+                          </button>
+                        ))}
+                      </>
+                    )}
                   </div>
                 </>
               )}
@@ -387,6 +422,14 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
 
       {printing && <PrintSheet proof={compiled} />}
     </>
+  );
+}
+
+function MenuHeading({ children }: { children: ReactNode }) {
+  return (
+    <div className="border-b border-ink-700/60 bg-ink-900/60 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-ink-500">
+      {children}
+    </div>
   );
 }
 
