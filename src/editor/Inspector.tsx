@@ -20,17 +20,22 @@ const ROLES: EntityRole[] = [
 ];
 const KINDS: EntityKind[] = ['box', 'call', 'value', 'oracle'];
 
+/** Sentinel for "no layer" — an element drawn on every one of them. */
+const EVERY_LAYER = '__all__';
+
 interface Props {
   scene: SceneModel;
   /** The selected step, for per-step layout editing. */
   step: SceneStep;
+  /** Index of that step, so relayering reveals the element from here onwards. */
+  stepIndex: number;
   editScope: EditScope;
   selection: Selection;
   dispatch: EditorDispatch;
   onSelect: (s: Selection) => void;
 }
 
-export default function Inspector({ scene, step, editScope, selection, dispatch, onSelect }: Props) {
+export default function Inspector({ scene, step, stepIndex, editScope, selection, dispatch, onSelect }: Props) {
   const entity = selection?.kind === 'entity' ? scene.entities.find((e) => e.id === selection.id) : undefined;
   const arrow = selection?.kind === 'arrow' ? scene.arrows.find((a) => a.id === selection.id) : undefined;
 
@@ -61,8 +66,24 @@ export default function Inspector({ scene, step, editScope, selection, dispatch,
     }
   };
 
+  /**
+   * Move the selection to another layer, or to all of them. Not a plain field
+   * edit: an element arriving on a layer has never been revealed there, so the
+   * reducer lights it up from this step onwards the way a new one would be.
+   */
+  const setLayer = (value: string) => {
+    if (!selection) return;
+    dispatch({
+      type: 'setElementLayer',
+      kind: selection.kind,
+      id: selection.id,
+      layer: value === EVERY_LAYER ? undefined : value,
+      fromStepIndex: stepIndex,
+    });
+  };
+
   return (
-    <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden">
+    <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden" data-tour="inspector">
       <div className="px-4 py-3 border-b border-ink-700/60">
         <h3 className="text-xs uppercase tracking-wider text-ink-400 font-semibold">
           {entity ? 'Node' : arrow ? 'Arrow' : 'Scene'}
@@ -127,6 +148,8 @@ export default function Inspector({ scene, step, editScope, selection, dispatch,
               </div>
             </div>
 
+            <LayerField scene={scene} value={entity.layer} onChange={setLayer} />
+
             {changed.length > 0 && (
               <div className="space-y-2 rounded-lg border border-ink-700/60 bg-ink-950/40 p-2.5">
                 <p className="text-[11px] text-ink-400 leading-relaxed">
@@ -168,9 +191,19 @@ export default function Inspector({ scene, step, editScope, selection, dispatch,
               Animated data flow
             </label>
 
+            {/* Two different jobs: `lane` slides the whole arrow across, keeping
+                it parallel — that is what separates arrows sharing a pair of
+                nodes — while `curve` bows only the middle, to route it clear of
+                whatever it would otherwise cross. */}
+            <Field label={`Lane offset (${arrow.lane ?? 0})`}>
+              <input type="range" min={-120} max={120} value={arrow.lane ?? 0} onChange={(e) => dispatch({ type: 'updateArrow', id: arrow.id, patch: { lane: Number(e.target.value) }, mergeKey: `lane:${arrow.id}` })} className="w-full" />
+            </Field>
+
             <Field label={`Curve (${arrow.curve ?? 0})`}>
               <input type="range" min={-150} max={150} value={arrow.curve ?? 0} onChange={(e) => dispatch({ type: 'updateArrow', id: arrow.id, patch: { curve: Number(e.target.value) }, mergeKey: `curve:${arrow.id}` })} className="w-full" />
             </Field>
+
+            <LayerField scene={scene} value={arrow.layer} onChange={setLayer} />
 
             <DeleteBtn label="Delete arrow" onClick={() => { dispatch({ type: 'deleteArrow', id: arrow.id }); onSelect(null); }} />
           </>
@@ -215,6 +248,39 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
       <label className="block text-[11px] uppercase tracking-wider text-ink-500 font-medium">{label}</label>
       {children}
     </div>
+  );
+}
+
+/**
+ * Which diagram this element belongs to. "Every layer" is for the pieces that
+ * don't change across the argument — the adversary box that every game reuses —
+ * so they don't have to be redrawn on each one.
+ */
+function LayerField({
+  scene,
+  value,
+  onChange,
+}: {
+  scene: SceneModel;
+  value: string | undefined;
+  onChange: (v: string) => void;
+}) {
+  return (
+    <Field label="Layer">
+      <select className={inputCls} value={value ?? EVERY_LAYER} onChange={(e) => onChange(e.target.value)}>
+        {scene.layers.map((l) => (
+          <option key={l.id} value={l.id}>
+            {l.name}
+          </option>
+        ))}
+        <option value={EVERY_LAYER}>Every layer</option>
+      </select>
+      {!value && (
+        <p className="text-[11px] text-ink-500 leading-relaxed">
+          Drawn on every layer — edits here follow it everywhere.
+        </p>
+      )}
+    </Field>
   );
 }
 

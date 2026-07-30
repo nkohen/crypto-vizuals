@@ -17,6 +17,7 @@
 //    separate arrows revealed in their own steps.
 
 import type { Arrow, BaseEntity, EntityOverride, Proof, SceneModel, SceneStep } from './types';
+import { makeLayer } from './scene';
 
 /** Fields a step may override; everything else must be constant across a scene. */
 const OVERRIDABLE = ['x', 'y', 'w', 'h', 'label', 'caption', 'role'] as const;
@@ -65,11 +66,16 @@ function modalValue(versions: BaseEntity[], f: Overridable): unknown {
 
 /** Identity of an arrow by what it draws, ignoring its id and active flag. */
 function arrowSignature(a: Arrow): string {
-  return JSON.stringify([a.from, a.to, a.label ?? '', a.flow ?? false, a.curve ?? 0]);
+  return JSON.stringify([a.from, a.to, a.label ?? '', a.flow ?? false, a.curve ?? 0, a.lane ?? 0]);
 }
 
 export function proofToScene(proof: Proof): ConversionReport {
   const lossy: string[] = [];
+
+  // A Proof has no layer axis: every step draws from one pool of elements. So
+  // the whole import lands on a single layer, which is exactly how it played
+  // back before. Splitting it up afterwards is the author's call.
+  const layer = makeLayer('Layer 1');
 
   // ── entities: one definition, plus per-step overrides ──────────────────────
   const versions = new Map<string, BaseEntity[]>();
@@ -97,6 +103,7 @@ export function proofToScene(proof: Proof): ConversionReport {
       role: modalValue(vs, 'role') as BaseEntity['role'],
       x: modalValue(vs, 'x') as number,
       y: modalValue(vs, 'y') as number,
+      layer: layer.id,
       label: modalValue(vs, 'label') as string,
     };
     const w = modalValue(vs, 'w') as number | undefined;
@@ -135,10 +142,11 @@ export function proofToScene(proof: Proof): ConversionReport {
 
       if (!arrowBySignature.has(sig)) {
         arrowSeq += 1;
-        const arrow: Arrow = { id: `ar-${arrowSeq}`, from: a.from, to: a.to };
+        const arrow: Arrow = { id: `ar-${arrowSeq}`, from: a.from, to: a.to, layer: layer.id };
         if (a.label) arrow.label = a.label;
         if (a.flow) arrow.flow = a.flow;
         if (a.curve) arrow.curve = a.curve;
+        if (a.lane) arrow.lane = a.lane;
         arrowBySignature.set(sig, arrow);
       }
       if (a.active === false) lossy.push(`arrow ${a.id} is explicitly inactive in step ${step.id}`);
@@ -175,6 +183,7 @@ export function proofToScene(proof: Proof): ConversionReport {
       tag: step.tag,
       narration: [...step.narration],
       claim: step.claim,
+      layer: layer.id,
       ...(step.diagramNote === undefined ? {} : { diagramNote: step.diagramNote }),
       activeEntityIds: step.entities.filter((e) => e.active !== false).map((e) => e.id),
       activeArrowIds: step.arrows
@@ -192,6 +201,7 @@ export function proofToScene(proof: Proof): ConversionReport {
     ...(proof.tabLabel === undefined ? {} : { tabLabel: proof.tabLabel }),
     subtitle: proof.subtitle,
     theorem: proof.theorem,
+    layers: [layer],
     entities,
     arrows,
     steps,

@@ -29,7 +29,7 @@ interface Props {
 
 export default function Palette({ onAdd, tool, onToolChange }: Props) {
   return (
-    <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden">
+    <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden" data-tour="palette">
       <div className="px-4 py-3 border-b border-ink-700/60">
         <h3 className="text-xs uppercase tracking-wider text-ink-400 font-semibold">Add</h3>
       </div>
@@ -55,6 +55,7 @@ export default function Palette({ onAdd, tool, onToolChange }: Props) {
       <div className="px-2 pb-2 pt-1 border-t border-ink-700/60">
         <button
           onClick={() => onToolChange(tool === 'link' ? 'select' : 'link')}
+          data-tour="link-tool"
           className={`w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium transition ${
             tool === 'link'
               ? 'bg-accent-500/20 text-accent-200 border border-accent-500/40'

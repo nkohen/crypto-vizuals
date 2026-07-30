@@ -4,22 +4,25 @@ import {
   compileScene,
   effectiveEntity,
   hasOverride,
+  layerContents,
+  layerRuns,
   makeEntity,
   normalizeScene,
   overriddenFields,
 } from './scene';
 import type { SceneModel, SceneStep } from './types';
 
-/** A two-step scene with one box and one circle, everything revealed. */
+/** A two-step scene on one layer, with one box and one circle, all revealed. */
 function twoStepScene(): SceneModel {
-  const box = { ...makeEntity('box', 'reduction', 300, 250), id: 'box' };
-  const dot = { ...makeEntity('value', 'input', 100, 100), id: 'dot' };
+  const box = { ...makeEntity('box', 'reduction', 300, 250), id: 'box', layer: 'L1' };
+  const dot = { ...makeEntity('value', 'input', 100, 100), id: 'dot', layer: 'L1' };
   const step = (id: string): SceneStep => ({
     id,
     title: id,
     tag: '',
     narration: [''],
     claim: '',
+    layer: 'L1',
     activeEntityIds: ['box', 'dot'],
     activeArrowIds: ['arrow'],
   });
@@ -28,8 +31,9 @@ function twoStepScene(): SceneModel {
     title: 'Scene',
     subtitle: '',
     theorem: '',
+    layers: [{ id: 'L1', name: 'Layer 1' }],
     entities: [box, dot],
-    arrows: [{ id: 'arrow', from: 'dot', to: 'box', flow: true }],
+    arrows: [{ id: 'arrow', from: 'dot', to: 'box', flow: true, layer: 'L1' }],
     steps: [step('one'), step('two')],
   };
 }
@@ -147,12 +151,157 @@ describe('compileScene', () => {
   });
 });
 
+/** `twoStepScene` plus a second layer holding one box and one step. */
+function twoLayerScene(): SceneModel {
+  const scene = twoStepScene();
+  const solo = { ...makeEntity('box', 'challenger', 400, 200), id: 'solo', layer: 'L2' };
+  return {
+    ...scene,
+    layers: [...scene.layers, { id: 'L2', name: 'Layer 2' }],
+    entities: [...scene.entities, solo],
+    steps: [
+      ...scene.steps,
+      {
+        id: 'three',
+        title: 'three',
+        tag: '',
+        narration: [''],
+        claim: '',
+        layer: 'L2',
+        activeEntityIds: ['solo'],
+        activeArrowIds: [],
+      },
+    ],
+  };
+}
+
+describe('layerContents', () => {
+  it('keeps the layer’s own elements and anything marked every-layer', () => {
+    const scene = twoLayerScene();
+    scene.entities[1] = { ...scene.entities[1], layer: undefined };
+    expect(layerContents(scene, 'L2').entities.map((e) => e.id)).toEqual(['dot', 'solo']);
+  });
+
+  it('drops arrows with an end on another layer', () => {
+    // Nothing to anchor to: the path would collapse onto the origin.
+    const scene = twoLayerScene();
+    scene.arrows.push({ id: 'cross', from: 'box', to: 'solo', layer: 'L2' });
+    expect(layerContents(scene, 'L2').arrows).toEqual([]);
+    expect(layerContents(scene, 'L1').arrows.map((a) => a.id)).toEqual(['arrow']);
+  });
+});
+
+describe('layerRuns', () => {
+  it('bands consecutive steps on the same layer together', () => {
+    const runs = layerRuns(twoLayerScene().steps);
+    expect(runs.map((r) => [r.layer, r.steps.map((s) => s.step.id)])).toEqual([
+      ['L1', ['one', 'two']],
+      ['L2', ['three']],
+    ]);
+  });
+
+  it('gives a layer a fresh run each time the argument returns to it', () => {
+    // "game 0, game 1, back to game 0 to compare" is three runs over two layers.
+    const scene = twoLayerScene();
+    const back = { ...scene.steps[0], id: 'four' };
+    const runs = layerRuns([...scene.steps, back]);
+    expect(runs.map((r) => r.layer)).toEqual(['L1', 'L2', 'L1']);
+    expect(runs[2].steps[0].index).toBe(3);
+  });
+
+  it('numbers steps by their place in the whole timeline', () => {
+    const runs = layerRuns(twoLayerScene().steps);
+    expect(runs.flatMap((r) => r.steps.map((s) => s.index))).toEqual([0, 1, 2]);
+  });
+});
+
+describe('compileScene with layers', () => {
+  it('emits only what the step’s own layer draws', () => {
+    const proof = compileScene(twoLayerScene());
+    expect(proof.steps[0].entities.map((e) => e.id).sort()).toEqual(['box', 'dot']);
+    expect(proof.steps[2].entities.map((e) => e.id)).toEqual(['solo']);
+  });
+
+  it('carries every-layer elements onto each layer', () => {
+    const scene = twoLayerScene();
+    scene.entities[0] = { ...scene.entities[0], layer: undefined };
+    const proof = compileScene(scene);
+    expect(proof.steps[2].entities.map((e) => e.id).sort()).toEqual(['box', 'solo']);
+    // Present but not activated by that step, so it renders dimmed rather than lit.
+    expect(proof.steps[2].entities.find((e) => e.id === 'box')?.active).toBe(false);
+  });
+
+  it('never emits an arrow whose endpoint is on another layer', () => {
+    const scene = twoLayerScene();
+    scene.arrows.push({ id: 'cross', from: 'box', to: 'solo' });
+    scene.steps[2].activeArrowIds = ['cross'];
+    expect(compileScene(scene).steps[2].arrows).toEqual([]);
+  });
+});
+
 describe('normalizeScene', () => {
   it('guarantees at least one step, revealing everything', () => {
     const normalized = normalizeScene({ ...twoStepScene(), steps: [] });
     expect(normalized.steps).toHaveLength(1);
     expect(normalized.steps[0].activeEntityIds).toEqual(['box', 'dot']);
     expect(normalized.steps[0].activeArrowIds).toEqual(['arrow']);
+  });
+
+  it('gives a scene written before layers one holding everything it had', () => {
+    // Opening it must look exactly as it was left — and a second layer must then
+    // start empty rather than inheriting a diagram the author never put there.
+    const legacy = twoStepScene() as Partial<SceneModel>;
+    delete legacy.layers;
+    for (const e of legacy.entities!) delete e.layer;
+    for (const a of legacy.arrows!) delete a.layer;
+    for (const s of legacy.steps!) delete (s as Partial<SceneStep>).layer;
+
+    const normalized = normalizeScene(legacy as SceneModel);
+    const only = normalized.layers[0].id;
+    expect(normalized.layers).toHaveLength(1);
+    expect(normalized.entities.every((e) => e.layer === only)).toBe(true);
+    expect(normalized.arrows.every((a) => a.layer === only)).toBe(true);
+    expect(normalized.steps.every((s) => s.layer === only)).toBe(true);
+    expect(compileScene(normalized).steps[0].entities).toHaveLength(2);
+  });
+
+  it('repairs steps and elements pointing at a layer that is gone', () => {
+    const scene = twoLayerScene();
+    scene.layers = [scene.layers[0]];
+    const normalized = normalizeScene(scene);
+    expect(normalized.steps.every((s) => s.layer === 'L1')).toBe(true);
+    expect(normalized.entities.find((e) => e.id === 'solo')?.layer).toBe('L1');
+  });
+
+  it('gives a layer with no steps one, revealing what it holds', () => {
+    const scene = twoLayerScene();
+    scene.steps = scene.steps.filter((s) => s.layer !== 'L2');
+    const normalized = normalizeScene(scene);
+    const added = normalized.steps.find((s) => s.layer === 'L2');
+    expect(added?.activeEntityIds).toEqual(['solo']);
+  });
+
+  it('leaves interleaved steps interleaved — that order is the argument', () => {
+    const scene = twoLayerScene();
+    scene.steps = [scene.steps[0], scene.steps[2], scene.steps[1]];
+    expect(normalizeScene(scene).steps.map((s) => s.id)).toEqual(['one', 'three', 'two']);
+  });
+
+  it('compiles an interleaved timeline layer by layer', () => {
+    const scene = twoLayerScene();
+    scene.steps = [scene.steps[0], scene.steps[2], scene.steps[1]];
+    const proof = compileScene(normalizeScene(scene));
+    expect(proof.steps.map((s) => s.entities.map((e) => e.id).sort())).toEqual([
+      ['box', 'dot'],
+      ['solo'],
+      ['box', 'dot'],
+    ]);
+  });
+
+  it('leaves an every-layer element unlayered rather than pinning it down', () => {
+    const scene = twoLayerScene();
+    scene.entities[0] = { ...scene.entities[0], layer: undefined };
+    expect(normalizeScene(scene).entities[0].layer).toBeUndefined();
   });
 
   it('migrates the pre-rename `layout` key to `overrides`', () => {

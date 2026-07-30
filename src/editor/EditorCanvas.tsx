@@ -5,7 +5,7 @@ import { W, H, entityBounds, arrowPath, sortEntitiesForRender } from '../diagram
 import DiagramDefs from '../diagram/DiagramDefs';
 import EntityNode from '../diagram/EntityNode';
 import ArrowShape from '../diagram/ArrowShape';
-import { effectiveEntity, hasOverride, uid } from '../scene';
+import { effectiveEntity, hasOverride, layerContents, uid } from '../scene';
 import type { EditorDispatch } from './history';
 import type { EditScope, Selection, Tool } from './editorTypes';
 
@@ -17,6 +17,8 @@ interface Props {
   stepIndex: number;
   /** Whether drags edit base geometry or this step's override. */
   editScope: EditScope;
+  /** Trace the other layers' diagrams faintly, for lining work up across them. */
+  showOtherLayers: boolean;
   dispatch: EditorDispatch;
   selection: Selection;
   onSelect: (sel: Selection) => void;
@@ -45,6 +47,7 @@ export default function EditorCanvas({
   step,
   stepIndex,
   editScope,
+  showOtherLayers,
   dispatch,
   selection,
   onSelect,
@@ -55,10 +58,13 @@ export default function EditorCanvas({
   const dragRef = useRef<DragState | null>(null);
   const [linkFrom, setLinkFrom] = useState<string | null>(null);
 
+  // Only the step's own layer is editable, and it is all the viewer will draw.
+  const layer = layerContents(scene, step.layer);
+
   // Draw the geometry being edited: base positions in 'base' scope, this step's
   // choreographed positions in 'step' scope. Arrows anchor to whatever is drawn.
   const displayed =
-    editScope === 'step' ? scene.entities.map((e) => effectiveEntity(e, step)) : scene.entities;
+    editScope === 'step' ? layer.entities.map((e) => effectiveEntity(e, step)) : layer.entities;
   const idMap = new Map(displayed.map((e) => [e.id, e]));
   const sorted = sortEntitiesForRender(displayed);
 
@@ -118,7 +124,8 @@ export default function EditorCanvas({
     if (linkFrom !== id) {
       dispatch({
         type: 'addArrow',
-        arrow: { id: uid('a'), from: linkFrom, to: id, flow: true },
+        // Belongs to the layer it was drawn on; the inspector can widen it later.
+        arrow: { id: uid('a'), from: linkFrom, to: id, flow: true, layer: step.layer },
         fromStepIndex: stepIndex,
       });
     }
@@ -233,48 +240,40 @@ export default function EditorCanvas({
       <rect width={W} height={H} fill="url(#grid)" />
 
       {/*
+        Faint traces of what the other layers hold. Never interactive — they are
+        only there to line a new layer's diagram up against the one before it.
+      */}
+      {showOtherLayers && (
+        <g pointerEvents="none" opacity={0.45}>
+          {scene.entities
+            .filter((e) => e.layer && e.layer !== step.layer)
+            .map((e) => (
+              // A longer dash than the override ghosts, so "on another layer"
+              // and "moved for this step" don't read as the same annotation.
+              <Outline key={`other-${e.id}`} entity={e} circle={!isBox(e)} stroke="#5a6c8c" dash="8 6" />
+            ))}
+        </g>
+      )}
+
+      {/*
         Ghosts of base geometry for entities this step repositions — so it's
         visible that the move is a per-step override, and where it came from.
       */}
       {editScope === 'step' && (
         <g pointerEvents="none">
-          {scene.entities.map((e) => {
-            if (!hasOverride(step, e.id)) return null;
-            const b = entityBounds(e);
-            const circle = !isBox(e);
-            return circle ? (
-              <circle
-                key={`ghost-${e.id}`}
-                cx={b.x + b.w / 2}
-                cy={b.y + b.h / 2}
-                r={b.w / 2}
-                fill="none"
-                stroke="#3a4a66"
-                strokeWidth={1.2}
-                strokeDasharray="3 5"
-              />
-            ) : (
-              <rect
-                key={`ghost-${e.id}`}
-                x={b.x}
-                y={b.y}
-                width={b.w}
-                height={b.h}
-                rx={10}
-                fill="none"
-                stroke="#3a4a66"
-                strokeWidth={1.2}
-                strokeDasharray="3 5"
-              />
-            );
-          })}
+          {layer.entities.map((e) =>
+            hasOverride(step, e.id) ? (
+              <Outline key={`ghost-${e.id}`} entity={e} circle={!isBox(e)} stroke="#3a4a66" />
+            ) : null,
+          )}
         </g>
       )}
 
       {/* Arrows (behind entities). Each has a fat transparent hit path. */}
       <g>
-        {scene.arrows.map((ar) => {
-          const geo = arrowPath(ar.from, ar.to, ar.curve ?? 0, idMap);
+        {layer.arrows.map((ar) => {
+          // Same geometry as the drawn arrow, so the fat hit path tracks it.
+          const geo = arrowPath(ar.from, ar.to, ar.curve ?? 0, idMap, ar.lane ?? 0);
           const selected = selection?.kind === 'arrow' && selection.id === ar.id;
           const lit = isLit(ar.id, 'arrow');
           return (
@@ -366,5 +365,26 @@ export default function EditorCanvas({
         })}
       </g>
     </svg>
+  );
+}
+
+/** Bare silhouette of an entity — used for anything shown but not editable here. */
+function Outline({
+  entity,
+  circle,
+  stroke,
+  dash = '3 5',
+}: {
+  entity: BaseEntity;
+  circle: boolean;
+  stroke: string;
+  dash?: string;
+}) {
+  const b = entityBounds(entity);
+  const common = { fill: 'none', stroke, strokeWidth: 1.2, strokeDasharray: dash };
+  return circle ? (
+    <circle cx={b.x + b.w / 2} cy={b.y + b.h / 2} r={b.w / 2} {...common} />
+  ) : (
+    <rect x={b.x} y={b.y} width={b.w} height={b.h} rx={10} {...common} />
   );
 }

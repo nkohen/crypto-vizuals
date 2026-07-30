@@ -11,10 +11,12 @@ import {
   BookOpen,
   Undo2,
   Redo2,
+  GraduationCap,
 } from 'lucide-react';
 import type { EntityKind, EntityRole, Proof, SceneModel } from '../types';
 import { W, H } from '../diagram/geometry';
-import { blankScene, compileScene, makeEntity } from '../scene';
+import { blankScene, compileScene, layerContents, makeEntity } from '../scene';
+import LayersPanel from './LayersPanel';
 import { proofToScene } from '../proofToScene';
 import { streamCipherProof } from '../proof';
 import { sequenceOfGamesProof } from '../gamesProof';
@@ -37,6 +39,8 @@ import {
   storeScene,
 } from './exporters';
 import type { EditScope, Selection, Tool } from './editorTypes';
+import { useTour } from './tutorial/useTour';
+import TourOverlay from './tutorial/TourOverlay';
 
 interface Props {
   mode: AppMode;
@@ -56,6 +60,7 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
   const [tool, setTool] = useState<Tool>('select');
   const [activeStepId, setActiveStepId] = useState(() => scene.steps[0]?.id ?? '');
   const [editScope, setEditScope] = useState<EditScope>('base');
+  const [showOtherLayers, setShowOtherLayers] = useState(false);
   const [printing, setPrinting] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [showExamples, setShowExamples] = useState(false);
@@ -70,8 +75,37 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
   );
   const step = scene.steps[stepIndex];
 
+  // The editable layer follows the selected step rather than being tracked
+  // separately: every layer owns at least one step, so a step is always enough
+  // to name a layer, and the two can never drift apart.
+  const layer = scene.layers.find((l) => l.id === step.layer) ?? scene.layers[0];
+  /** Select a layer by landing on its first step. */
+  const selectLayer = (layerId: string) => {
+    const first = scene.steps.find((s) => s.layer === layerId);
+    if (first) setActiveStepId(first.id);
+  };
+
+  /** What this layer draws — the only things the canvas and inspector may touch. */
+  const visible = useMemo(() => layerContents(scene, layer.id), [scene, layer.id]);
+
   const compiled = useMemo(() => compileScene(scene), [scene]);
   const compiledStep = compiled.steps[stepIndex] ?? compiled.steps[0];
+
+  // Only interrupt someone who arrived at an empty canvas; anyone reopening work
+  // gets the tutorial from the toolbar when they want it.
+  const [openedEmpty] = useState(() => scene.entities.length === 0);
+  const tour = useTour(
+    { scene, tool, selection, stepIndex },
+    {
+      setTool,
+      setSelection,
+      selectFirstNode: () => {
+        const first = visible.entities[0];
+        if (first) setSelection({ kind: 'entity', id: first.id });
+      },
+    },
+    openedEmpty,
+  );
 
   // Best-effort autosave so work survives a refresh.
   useEffect(() => {
@@ -92,10 +126,20 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  // Per-step layout is meaningless with a single step.
+  // Per-step layout is choreography between steps sharing a diagram, so it only
+  // means anything once this layer has a sequence.
+  const stepsOnLayer = scene.steps.filter((s) => s.layer === layer.id).length;
   useEffect(() => {
-    if (scene.steps.length <= 1) setEditScope('base');
-  }, [scene.steps.length]);
+    if (stepsOnLayer <= 1) setEditScope('base');
+  }, [stepsOnLayer]);
+
+  // Never leave the inspector editing something the canvas isn't drawing —
+  // switching layers would otherwise strand it on a node from the one you left.
+  useEffect(() => {
+    if (!selection) return;
+    const list = selection.kind === 'entity' ? visible.entities : visible.arrows;
+    if (!list.some((el) => el.id === selection.id)) setSelection(null);
+  }, [selection, visible.entities, visible.arrows]);
 
   // Open the print dialog once the (offscreen) sheet has actually been laid out.
   useEffect(() => {
@@ -113,11 +157,12 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
   }, [printing]);
 
   const addEntity = (kind: EntityKind, role: EntityRole) => {
-    const n = scene.entities.length;
+    const n = scene.entities.filter((e) => e.layer === layer.id).length;
     // Cascade new nodes around the center so they don't stack exactly.
     const cx = W / 2 + ((n % 5) - 2) * 44;
     const cy = H / 2 + ((Math.floor(n / 5) % 4) - 1) * 54;
-    const entity = makeEntity(kind, role, cx, cy);
+    // New nodes join the layer being edited; the inspector can widen them later.
+    const entity = { ...makeEntity(kind, role, cx, cy), layer: layer.id };
     dispatch({ type: 'addEntity', entity, fromStepIndex: stepIndex });
     setSelection({ kind: 'entity', id: entity.id });
     setTool('select');
@@ -175,6 +220,20 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
     }
   };
 
+  /**
+   * The tour asks the user to genuinely build things, so it gets a scene of its
+   * own rather than adding nodes to work in progress. Nothing is lost: autosave
+   * is keyed per scene, so the old one is still under Example → recent scenes.
+   */
+  const startTutorial = () => {
+    if (scene.entities.length) {
+      if (!confirm('Start the tutorial in a fresh scene? This one is autosaved — reopen it from the Example menu.'))
+        return;
+      replaceScene({ ...blankScene(), title: 'Tutorial scene' });
+    }
+    tour.start();
+  };
+
   /** Convert a hand-authored proof into an editable scene and open it. */
   const loadExample = (proof: Proof) => {
     setShowExamples(false);
@@ -226,6 +285,13 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
               iconOnly
             />
             <span className="mx-0.5 h-5 w-px bg-ink-700/70" />
+            <ToolbarBtn
+              onClick={startTutorial}
+              icon={<GraduationCap size={14} />}
+              label="Tutorial"
+              title="Walk through the editor one action at a time"
+              dataTour="tutorial"
+            />
             <ToolbarBtn onClick={newScene} icon={<FilePlus size={14} />} label="New" />
             <div className="relative">
               <ToolbarBtn
@@ -289,6 +355,7 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
               onClick={() => onOpenInViewer(compiled)}
               icon={<Eye size={14} />}
               label="Open in viewer"
+              dataTour="open-viewer"
               primary
             />
             <input ref={fileRef} type="file" accept="application/json,.json" className="hidden" onChange={onLoadFile} />
@@ -302,18 +369,26 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
       {/* Main layout */}
       <main className="mx-auto max-w-7xl w-full px-6 py-6 flex-1">
         <div className="grid lg:grid-cols-[220px_1fr_320px] gap-5">
-          <aside className="order-2 lg:order-1">
+          <aside className="order-2 lg:order-1 space-y-5">
             <Palette onAdd={addEntity} tool={tool} onToolChange={setTool} />
+            <LayersPanel
+              scene={scene}
+              activeLayerId={layer.id}
+              onSelectLayer={selectLayer}
+              onSelectStep={setActiveStepId}
+              showOtherLayers={showOtherLayers}
+              onShowOtherLayersChange={setShowOtherLayers}
+              dispatch={dispatch}
+            />
           </aside>
 
           <section className="order-1 lg:order-2 space-y-5">
             <div className="rounded-2xl border border-ink-700/60 bg-gradient-to-br from-ink-850 to-ink-900 p-3 sm:p-5">
               <div className="mb-3 flex items-center justify-between gap-3 px-1">
                 <p className="text-[11px] text-ink-500 truncate">
-                  Previewing{' '}
-                  <span className="text-ink-300 font-medium">
-                    step {stepIndex + 1}/{scene.steps.length}
-                  </span>
+                  <span className="text-ink-300 font-medium">{layer.name}</span>
+                  <span className="text-ink-600"> · </span>
+                  step {stepIndex + 1}/{scene.steps.length}
                   {step.title ? <span className="text-ink-400"> · {step.title}</span> : null}
                 </p>
                 <div className="flex shrink-0 items-center gap-2">
@@ -323,7 +398,7 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
                     </span>
                   )}
                   {/* Choreography only means something once there's a sequence. */}
-                  {scene.steps.length > 1 && (
+                  {stepsOnLayer > 1 && (
                     <div
                       className="flex items-center rounded-lg border border-ink-600/70 bg-ink-800/60 p-0.5"
                       title="Where dragging writes: the shared base position, or an override for this step only"
@@ -338,21 +413,29 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
                   )}
                 </div>
               </div>
-              <div className="relative rounded-xl bg-ink-950/60 border border-ink-700/40 overflow-hidden">
+              <div
+                className="relative rounded-xl bg-ink-950/60 border border-ink-700/40 overflow-hidden"
+                data-tour="canvas"
+              >
                 <EditorCanvas
                   scene={scene}
                   step={step}
                   stepIndex={stepIndex}
                   editScope={editScope}
+                  showOtherLayers={showOtherLayers}
                   dispatch={dispatch}
                   selection={selection}
                   onSelect={setSelection}
                   tool={tool}
                   onToolChange={setTool}
                 />
-                {scene.entities.length === 0 && (
+                {!scene.entities.some((e) => !e.layer || e.layer === layer.id) && (
                   <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                    <p className="text-sm text-ink-500">Add nodes from the left to start building.</p>
+                    <p className="text-sm text-ink-500">
+                      {scene.layers.length > 1
+                        ? `“${layer.name}” is empty — add nodes from the left.`
+                        : 'Add nodes from the left to start building.'}
+                    </p>
                   </div>
                 )}
               </div>
@@ -387,6 +470,7 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
             <Inspector
               scene={scene}
               step={step}
+              stepIndex={stepIndex}
               editScope={editScope}
               selection={selection}
               dispatch={dispatch}
@@ -400,7 +484,8 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
         <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between text-xs text-ink-500">
           <span>ReductionLab — editing “{scene.title}”</span>
           <span className="font-mono">
-            {scene.entities.length} nodes · {scene.arrows.length} arrows · {scene.steps.length} steps
+            {scene.layers.length} layers · {scene.entities.length} nodes · {scene.arrows.length} arrows ·{' '}
+            {scene.steps.length} steps
           </span>
         </div>
       </footer>
@@ -421,6 +506,18 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
       </div>
 
       {printing && <PrintSheet proof={compiled} />}
+
+      {tour.step && (
+        <TourOverlay
+          step={tour.step}
+          index={tour.index ?? 0}
+          total={tour.total}
+          awaiting={tour.awaiting}
+          onNext={tour.next}
+          onBack={tour.back}
+          onStop={tour.stop}
+        />
+      )}
     </>
   );
 }
@@ -463,6 +560,7 @@ function ToolbarBtn({
   title,
   disabled,
   iconOnly,
+  dataTour,
 }: {
   onClick: () => void;
   icon: ReactNode;
@@ -472,6 +570,8 @@ function ToolbarBtn({
   disabled?: boolean;
   /** Keep the label for assistive tech only; the toolbar is crowded. */
   iconOnly?: boolean;
+  /** Anchor for the tutorial's spotlight. */
+  dataTour?: string;
 }) {
   return (
     <button
@@ -479,6 +579,7 @@ function ToolbarBtn({
       title={title ?? label}
       aria-label={label}
       disabled={disabled}
+      data-tour={dataTour}
       className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition disabled:opacity-40 disabled:cursor-not-allowed ${
         primary
           ? 'bg-accent-500/90 text-white hover:bg-accent-400'

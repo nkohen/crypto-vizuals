@@ -167,4 +167,14 @@ describe('conversion strategy', () => {
     expect(normalizeScene(scene)).toEqual(scene);
     expect(scene.steps.length).toBeGreaterThan(0);
   });
+
+  it('lands the whole import on one layer, since a Proof has no layer axis', () => {
+    // Splitting it into games afterwards is the author's call, not the importer's.
+    const { scene } = proofToScene(streamCipherProof);
+    const only = scene.layers[0].id;
+    expect(scene.layers).toHaveLength(1);
+    expect(scene.entities.every((e) => e.layer === only)).toBe(true);
+    expect(scene.arrows.every((a) => a.layer === only)).toBe(true);
+    expect(scene.steps.every((s) => s.layer === only)).toBe(true);
+  });
 });

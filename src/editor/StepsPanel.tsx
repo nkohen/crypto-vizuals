@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import type { SceneModel, SceneStep } from '../types';
 import { renderRichText } from '../richText';
-import { uid } from '../scene';
+import { layerContents, layerRuns, uid } from '../scene';
 import type { EditorDispatch } from './history';
 import type { Tool } from './editorTypes';
 
@@ -27,9 +27,10 @@ interface Props {
 }
 
 /**
- * The reveal timeline: pick a step, edit its narration, and choose which scene
- * nodes/arrows are lit while it's on screen. The canvas previews the selected
- * step live, so the timeline is edited in the same view it plays back in.
+ * The reveal timeline: pick a step, edit its narration, and choose which of the
+ * layer's nodes/arrows are lit while it's on screen. The canvas previews the
+ * selected step live, so the timeline is edited in the same view it plays back
+ * in. Chips are grouped by layer, since that grouping *is* the playback order.
  */
 export default function StepsPanel({
   scene,
@@ -41,6 +42,11 @@ export default function StepsPanel({
   onToolChange,
 }: Props) {
   const total = scene.steps.length;
+  // Only what this step's layer draws can be revealed by it.
+  const visible = layerContents(scene, step.layer);
+  const inLayer = scene.steps.filter((s) => s.layer === step.layer);
+  const lastOfLayer = inLayer.length <= 1;
+  const layerName = (id: string) => scene.layers.find((l) => l.id === id)?.name ?? 'Layer';
 
   // mergeKey names the field, so typing collapses into one undo step.
   const patch = (p: Partial<Omit<SceneStep, 'id'>>, mergeKey?: string) =>
@@ -62,46 +68,63 @@ export default function StepsPanel({
   };
 
   const deleteStep = () => {
-    if (total <= 1) return;
-    // Select a surviving neighbour before the step disappears.
-    const next = scene.steps[stepIndex + 1] ?? scene.steps[stepIndex - 1];
+    if (lastOfLayer) return;
+    // Select a surviving neighbour on the same layer before the step disappears.
+    const next = inLayer[inLayer.indexOf(step) + 1] ?? inLayer[inLayer.indexOf(step) - 1];
     dispatch({ type: 'deleteStep', id: step.id });
     if (next) onSelectStep(next.id);
   };
 
   return (
-    <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden">
-      {/* header + step chips */}
+    <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden" data-tour="timeline">
+      {/* header + step chips, banded into the runs of consecutive same-layer
+          steps they play back as — a layer may appear in several */}
       <div className="px-4 py-3 border-b border-ink-700/60 flex items-center gap-3 flex-wrap">
         <h3 className="text-xs uppercase tracking-wider text-ink-400 font-semibold shrink-0">Timeline</h3>
-        <div className="flex items-center gap-1.5 flex-wrap min-w-0">
-          {scene.steps.map((s, i) => {
-            const active = s.id === step.id;
+        <div className="flex items-center gap-2.5 flex-wrap min-w-0">
+          {layerRuns(scene.steps).map((run, runIndex) => {
+            const current = run.layer === step.layer;
             return (
-              <button
-                key={s.id}
-                onClick={() => onSelectStep(s.id)}
-                title={s.title}
-                className={`flex items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium transition max-w-[13rem] ${
-                  active
-                    ? 'bg-accent-500/15 text-accent-200 border border-accent-500/40'
-                    : 'text-ink-400 border border-ink-700/60 hover:text-ink-200 hover:bg-ink-800/60'
+              <div
+                key={`${run.layer}-${runIndex}`}
+                className={`flex items-center gap-1.5 rounded-lg border px-1.5 py-1 transition ${
+                  current ? 'border-ink-600/70 bg-ink-800/40' : 'border-ink-800/60 opacity-60'
                 }`}
               >
-                <span
-                  className={`flex h-4 w-4 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold ${
-                    active ? 'bg-accent-500 text-white' : 'bg-ink-700 text-ink-300'
-                  }`}
-                >
-                  {i + 1}
+                <span className="shrink-0 max-w-[7rem] truncate text-[10px] font-semibold uppercase tracking-wider text-ink-500">
+                  {layerName(run.layer)}
                 </span>
-                <span className="truncate">{s.title || 'Untitled'}</span>
-              </button>
+                {run.steps.map(({ step: s, index }) => {
+                  const active = s.id === step.id;
+                  return (
+                    <button
+                      key={s.id}
+                      onClick={() => onSelectStep(s.id)}
+                      title={s.title}
+                      className={`flex items-center gap-1.5 rounded-md px-1.5 py-0.5 text-xs font-medium transition max-w-[11rem] ${
+                        active
+                          ? 'bg-accent-500/15 text-accent-200 border border-accent-500/40'
+                          : 'text-ink-400 border border-transparent hover:text-ink-200 hover:bg-ink-800/60'
+                      }`}
+                    >
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded font-mono text-[10px] font-bold ${
+                          active ? 'bg-accent-500 text-white' : 'bg-ink-700 text-ink-300'
+                        }`}
+                      >
+                        {index + 1}
+                      </span>
+                      <span className="truncate">{s.title || 'Untitled'}</span>
+                    </button>
+                  );
+                })}
+              </div>
             );
           })}
         </div>
         <button
           onClick={addStep}
+          data-tour="add-step"
           className="ml-auto flex shrink-0 items-center gap-1.5 rounded-lg border border-accent-500/40 bg-accent-500/10 px-2.5 py-1.5 text-xs font-medium text-accent-200 transition hover:bg-accent-500/20"
         >
           <Plus size={13} /> Add step
@@ -116,6 +139,25 @@ export default function StepsPanel({
               Step <span className="font-mono text-ink-300">{stepIndex + 1}</span> of{' '}
               <span className="font-mono">{total}</span>
             </span>
+            {scene.layers.length > 1 && (
+              <select
+                value={step.layer}
+                onChange={(e) => dispatch({ type: 'setStepLayer', stepId: step.id, layer: e.target.value })}
+                title={
+                  lastOfLayer
+                    ? 'This is its layer’s only step — a layer always keeps one'
+                    : 'Draw a different layer’s diagram during this step, without moving it in the timeline'
+                }
+                disabled={lastOfLayer}
+                className="rounded-md border border-ink-600/70 bg-ink-950/60 px-1.5 py-0.5 text-[11px] text-ink-300 outline-none focus:border-accent-500/60 disabled:opacity-40"
+              >
+                {scene.layers.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+            )}
             <div className="ml-auto flex items-center gap-1">
               <IconBtn
                 onClick={() => dispatch({ type: 'moveStep', id: step.id, dir: -1 })}
@@ -134,7 +176,12 @@ export default function StepsPanel({
               <IconBtn onClick={duplicateStep} title="Duplicate step">
                 <Copy size={13} />
               </IconBtn>
-              <IconBtn onClick={deleteStep} disabled={total <= 1} title="Delete step" danger>
+              <IconBtn
+                onClick={deleteStep}
+                disabled={lastOfLayer}
+                title={lastOfLayer ? 'A layer always keeps one step — delete the layer instead' : 'Delete step'}
+                danger
+              >
                 <Trash2 size={13} />
               </IconBtn>
             </div>
@@ -253,6 +300,7 @@ export default function StepsPanel({
 
           <button
             onClick={() => onToolChange(tool === 'reveal' ? 'select' : 'reveal')}
+            data-tour="reveal-tool"
             className={`w-full flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium transition ${
               tool === 'reveal'
                 ? 'bg-accent-500/20 text-accent-200 border border-accent-500/40'
@@ -263,15 +311,16 @@ export default function StepsPanel({
             {tool === 'reveal' ? 'Clicking toggles visibility' : 'Toggle by clicking canvas'}
           </button>
 
-          {scene.entities.length === 0 && scene.arrows.length === 0 ? (
+          {/* Scoped to the layer: nothing else is on screen to reveal. */}
+          {visible.entities.length === 0 && visible.arrows.length === 0 ? (
             <p className="text-[11px] text-ink-500 leading-relaxed">
-              Nothing to reveal yet — add nodes to the canvas first.
+              Nothing to reveal yet — add nodes to this layer first.
             </p>
           ) : (
             <div className="max-h-72 overflow-y-auto scroll-thin space-y-2.5 pr-0.5">
-              {scene.entities.length > 0 && (
+              {visible.entities.length > 0 && (
                 <ToggleGroup title="Nodes">
-                  {scene.entities.map((e) => (
+                  {visible.entities.map((e) => (
                     <ToggleRow
                       key={e.id}
                       on={step.activeEntityIds.includes(e.id)}
@@ -281,9 +330,9 @@ export default function StepsPanel({
                   ))}
                 </ToggleGroup>
               )}
-              {scene.arrows.length > 0 && (
+              {visible.arrows.length > 0 && (
                 <ToggleGroup title="Arrows">
-                  {scene.arrows.map((a) => (
+                  {visible.arrows.map((a) => (
                     <ToggleRow
                       key={a.id}
                       on={step.activeArrowIds.includes(a.id)}

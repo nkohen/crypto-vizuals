@@ -8,7 +8,7 @@ import { arrowPath } from './geometry';
  * curve/anchor arrows identically.
  */
 export default function ArrowShape({ arrow, idMap }: { arrow: Arrow; idMap: Map<string, BaseEntity> }) {
-  const { d, cx, cy } = arrowPath(arrow.from, arrow.to, arrow.curve ?? 0, idMap);
+  const { d, cx, cy } = arrowPath(arrow.from, arrow.to, arrow.curve ?? 0, idMap, arrow.lane ?? 0);
 
   const active = arrow.active !== false;
   const color = arrow.flow ? '#74d4ff' : '#5a6c8c';

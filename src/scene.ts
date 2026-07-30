@@ -7,6 +7,7 @@ import type {
   EntityKind,
   EntityOverride,
   EntityRole,
+  Layer,
   Proof,
   ProofStep,
   SceneModel,
@@ -54,58 +55,138 @@ export function makeEntity(kind: EntityKind, role: EntityRole, x: number, y: num
   return { id: uid('e'), kind, role, x: Math.round(x - w / 2), y: Math.round(y - h / 2), w, h, label: defaultLabel(role) };
 }
 
-/** A fresh, empty scene with a single "everything visible" step. */
+export function makeLayer(name: string): Layer {
+  return { id: uid('layer'), name };
+}
+
+/** An empty step on `layer`, revealing whatever `reveals` says is already there. */
+export function makeStep(
+  layer: string,
+  title: string,
+  reveals?: { entities: string[]; arrows: string[] },
+): SceneStep {
+  return {
+    id: uid('step'),
+    title,
+    tag: '',
+    narration: [''],
+    claim: '',
+    layer,
+    activeEntityIds: reveals ? [...reveals.entities] : [],
+    activeArrowIds: reveals ? [...reveals.arrows] : [],
+  };
+}
+
+/** A fresh, empty scene with one layer and a single step on it. */
 export function blankScene(): SceneModel {
+  const layer = makeLayer('Layer 1');
   return {
     id: uid('scene'),
     title: 'My Reduction',
     subtitle: '',
     theorem: '',
+    layers: [layer],
     entities: [],
     arrows: [],
-    steps: [
-      {
-        id: uid('step'),
-        title: 'Step 1',
-        tag: 'Setup',
-        narration: [''],
-        claim: '',
-        activeEntityIds: [],
-        activeArrowIds: [],
-      },
-    ],
+    steps: [{ ...makeStep(layer.id, 'Step 1'), tag: 'Setup' }],
   };
 }
 
+// ── Layers ───────────────────────────────────────────────────────────────────
+
+/** Whether an element is drawn on `layerId`. Unlayered elements show everywhere. */
+export function onLayer(el: { layer?: string }, layerId: string): boolean {
+  return !el.layer || el.layer === layerId;
+}
+
+/**
+ * What a layer actually contains. Arrows are dropped when an endpoint lives on
+ * another layer: with nothing to anchor to they would collapse onto the origin,
+ * so an arrow only survives where both of its ends are drawn.
+ */
+export function layerContents(
+  scene: Pick<SceneModel, 'entities' | 'arrows'>,
+  layerId: string,
+): { entities: BaseEntity[]; arrows: Arrow[] } {
+  if (!layerId) return { entities: scene.entities, arrows: scene.arrows };
+  const entities = scene.entities.filter((e) => onLayer(e, layerId));
+  const drawn = new Set(entities.map((e) => e.id));
+  const anchored = (ref: string | [number, number]) => Array.isArray(ref) || drawn.has(ref);
+  const arrows = scene.arrows.filter((a) => onLayer(a, layerId) && anchored(a.from) && anchored(a.to));
+  return { entities, arrows };
+}
+
+/**
+ * The timeline split into runs of consecutive steps on the same layer. Step
+ * order is playback order and a layer may be returned to as often as the
+ * argument wants, so a layer can own several runs — "game 0, game 1, back to
+ * game 0 to compare" is three runs over two layers.
+ */
+export function layerRuns(steps: SceneStep[]): { layer: string; steps: { step: SceneStep; index: number }[] }[] {
+  const runs: { layer: string; steps: { step: SceneStep; index: number }[] }[] = [];
+  steps.forEach((step, index) => {
+    const open = runs[runs.length - 1];
+    if (open && open.layer === step.layer) open.steps.push({ step, index });
+    else runs.push({ layer: step.layer, steps: [{ step, index }] });
+  });
+  return runs;
+}
+
 /** A step as it may appear in a scene file written by an older build. */
-type LegacyStep = SceneStep & { layout?: Record<string, EntityOverride> };
+type LegacyStep = Omit<SceneStep, 'layer'> & {
+  layer?: string;
+  layout?: Record<string, EntityOverride>;
+};
 
 /**
  * Bring an incoming scene up to the current shape. Applied where scenes enter
  * from outside (imported files, localStorage), which is the only place a stale
  * or malformed document can appear:
- *  - guarantee at least one step (the editor and compiler assume it)
+ *  - guarantee at least one layer, and at least one step per layer
+ *  - point every step and element at a layer that exists
  *  - migrate the old per-step `layout` key to `overrides`
+ *
+ * Step order is left exactly as found: it is the playback order, and which
+ * layer a step draws is independent of where it sits in the argument.
+ *
+ * A scene predating layers gets one, holding everything it already had, so it
+ * opens exactly as it was left — and so a second layer starts out empty rather
+ * than inheriting a diagram the author never put there.
  */
 export function normalizeScene(scene: SceneModel): SceneModel {
-  const steps = scene.steps.map((step) => {
+  const preLayers = !scene.layers?.length;
+  const layers = preLayers ? [makeLayer('Layer 1')] : scene.layers;
+  const known = new Set(layers.map((l) => l.id));
+  const fallback = layers[0].id;
+
+  /** Resolve an element's layer, keeping "every layer" but repairing dangling ids. */
+  const resolve = <T extends { layer?: string }>(el: T): T => {
+    if (preLayers) return { ...el, layer: fallback };
+    return el.layer && !known.has(el.layer) ? { ...el, layer: fallback } : el;
+  };
+  const entities = scene.entities.map(resolve);
+  const arrows = scene.arrows.map(resolve);
+
+  const steps: SceneStep[] = scene.steps.map((step) => {
     const { layout, ...rest } = step as LegacyStep;
-    return layout && !rest.overrides ? { ...rest, overrides: layout } : rest;
+    const migrated = layout && !rest.overrides ? { ...rest, overrides: layout } : rest;
+    return { ...migrated, layer: migrated.layer && known.has(migrated.layer) ? migrated.layer : fallback };
   });
 
-  if (!steps.length) {
-    steps.push({
-      id: uid('step'),
-      title: 'Step 1',
-      tag: '',
-      narration: [''],
-      claim: '',
-      activeEntityIds: scene.entities.map((e) => e.id),
-      activeArrowIds: scene.arrows.map((a) => a.id),
-    });
+  // Every layer keeps a step, so selecting a layer in the editor always lands on
+  // something to narrate — and so no layer can silently drop out of playback.
+  for (const layer of layers) {
+    if (steps.some((s) => s.layer === layer.id)) continue;
+    const visible = layerContents({ entities, arrows }, layer.id);
+    steps.push(
+      makeStep(layer.id, layer.name, {
+        entities: visible.entities.map((e) => e.id),
+        arrows: visible.arrows.map((a) => a.id),
+      }),
+    );
   }
 
-  return { ...scene, steps };
+  return { ...scene, layers, entities, arrows, steps };
 }
 
 /**
@@ -130,9 +211,9 @@ export function hasOverride(step: SceneStep | undefined, entityId: string): bool
 
 /**
  * Project a SceneModel into a Proof: each SceneStep becomes a ProofStep carrying
- * the scene's entities/arrows with `active` set explicitly (the renderer dims
- * anything with active === false) and that step's overrides merged in. Steps
- * marked `inactive: 'hide'` emit only their active elements, so nothing
+ * the elements of that step's layer with `active` set explicitly (the renderer
+ * dims anything with active === false) and that step's overrides merged in.
+ * Steps marked `inactive: 'hide'` emit only their active elements, so nothing
  * not-yet-introduced is drawn at all.
  */
 export function compileScene(scene: SceneModel): Proof {
@@ -140,22 +221,21 @@ export function compileScene(scene: SceneModel): Proof {
     ? scene.steps
     : [
         {
-          id: uid('step'),
-          title: 'Overview',
+          ...makeStep(scene.layers?.[0]?.id ?? '', 'Overview', {
+            entities: scene.entities.map((e) => e.id),
+            arrows: scene.arrows.map((a) => a.id),
+          }),
           tag: '',
-          narration: [''],
-          claim: '',
-          activeEntityIds: scene.entities.map((e) => e.id),
-          activeArrowIds: scene.arrows.map((a) => a.id),
         },
       ];
 
   const compiledSteps: ProofStep[] = steps.map((s) => {
     const hide = s.inactive === 'hide';
-    const entities = scene.entities
+    const visible = layerContents(scene, s.layer);
+    const entities = visible.entities
       .filter((e) => !hide || s.activeEntityIds.includes(e.id))
       .map((e) => ({ ...effectiveEntity(e, s), active: s.activeEntityIds.includes(e.id) }));
-    const arrows = scene.arrows
+    const arrows = visible.arrows
       .filter((a) => !hide || s.activeArrowIds.includes(a.id))
       .map((a): Arrow => ({ ...a, active: s.activeArrowIds.includes(a.id) }));
 

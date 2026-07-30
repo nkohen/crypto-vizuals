@@ -24,6 +24,8 @@ export interface BaseEntity {
   h?: number;
   /** Optional parent box id, for the "boxes within boxes" nesting. */
   parent?: string;
+  /** Scene layer this belongs to; absent means "draw on every layer". */
+  layer?: string;
   label: string;
   /** A short caption shown beneath the entity when highlighted. */
   caption?: string;
@@ -42,8 +44,17 @@ export interface Arrow {
   /** Flow style — animated dashes for live data, solid for structural. */
   flow?: boolean;
   active?: boolean;
-  /** Bend the path (positive = up). */
+  /** Bend the middle of the path, leaving both ends where they are. */
   curve?: number;
+  /**
+   * Shift the whole path sideways, endpoints included, so arrows joining the
+   * same two nodes run as separate parallel tracks rather than piling onto one
+   * point of each node. Set automatically when an arrow joins a pair that
+   * already has one.
+   */
+  lane?: number;
+  /** Scene layer this belongs to; absent means "draw on every layer". */
+  layer?: string;
 }
 
 export interface ProofStep {
@@ -81,6 +92,17 @@ export interface Proof {
 // Proof/ProofStep[] the viewer already renders.
 
 /**
+ * A drawing surface within a scene. Layers are the coarse axis and steps the
+ * fine one: a layer holds one diagram, and the several steps sharing it narrate
+ * that diagram without redrawing it. Nothing from another layer is drawn — which
+ * is what keeps a long argument (game 0, game 1, …) from piling up in one frame.
+ */
+export interface Layer {
+  id: string;
+  name: string;
+}
+
+/**
  * Fields an individual step may override on a scene entity. Geometry enables
  * choreography (an entity moving/resizing between steps); label/caption/role
  * let the same entity be re-annotated or re-coloured as the argument advances.
@@ -101,6 +123,8 @@ export interface SceneStep {
   narration: string[];
   claim: string;
   diagramNote?: string;
+  /** The layer this step plays on. Several steps may share one. */
+  layer: string;
   /** Scene entities/arrows lit (active) in this step. */
   activeEntityIds: string[];
   activeArrowIds: string[];
@@ -117,7 +141,14 @@ export interface SceneModel {
   tabLabel?: string;
   subtitle: string;
   theorem: string;
+  /**
+   * Drawing surfaces, in playback order. Always at least one, and every layer
+   * always owns at least one step — normalizeScene() restores both invariants
+   * for documents arriving from outside.
+   */
+  layers: Layer[];
   entities: BaseEntity[];
   arrows: Arrow[];
+  /** Ordered, and always grouped by layer following `layers`. */
   steps: SceneStep[];
 }
