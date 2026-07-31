@@ -9,5 +9,5 @@ Each entry is one line: `- [Title](file.md) — one-line hook`
 
 ---
 
-_(No entries yet — the first one gets written when something is actually learned in a
-session. An honest empty index beats a seeded one nobody wrote.)_
+- [Project vision](project-vision.md) — ReductionLab is a proof-by-reduction viewer today; next phase is a student authoring tool that exports into that viewer format
+- [Commit policy](commit-policy.md) — work lands directly on master; don't propose a branch or re-ask once a commit is requested
