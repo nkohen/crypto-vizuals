@@ -21,3 +21,8 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# almanac: regenerable analysis artifacts (the interview record IS tracked)
+.almanac/hir.json
+.almanac/snapshots/
+.almanac/.lock
