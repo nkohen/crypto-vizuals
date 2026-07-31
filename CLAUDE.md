@@ -31,6 +31,24 @@ Before calling work done, run the checks that apply to what changed.
 - Mathematical notation is rendered with **KaTeX**. When an expression is lifted from a
   LaTeX source, keep the rendered output faithful to that source.
 - Tests are written with **vitest**.
+- **Work lands on `master`.** This is a single-maintainer repo; commits and pushes go
+  straight to the default branch. Do not propose a feature branch, and do not ask again
+  once a commit has been requested — just run the checks that apply and push.
+
+## Known limitations
+
+`LIMITATIONS.md` lists what the scene model and editor genuinely cannot do, as opposed to
+what is broken. Read it before concluding that a missing capability is a bug, and before
+designing around one.
+
+It exists because a limitation documented only at its own call site is invisible from
+where it hurts: "an imported Proof lands entirely on one layer" was correctly written down
+in `src/proofToScene.ts` the whole time the built-in examples were, for that exact reason,
+a mess to edit.
+
+- When you document a limitation in code, add a line to `LIMITATIONS.md` pointing at it.
+- When a limitation is lifted, delete its entry in the same change. Stale entries are
+  worse than none — the same rule the memory index runs under.
 
 ## Memory system
 
