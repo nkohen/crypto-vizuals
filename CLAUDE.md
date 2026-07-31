@@ -35,6 +35,43 @@ Before calling work done, run the checks that apply to what changed.
   straight to the default branch. Do not propose a feature branch, and do not ask again
   once a commit has been requested — just run the checks that apply and push.
 
+## Asking, reporting, verifying
+
+<!-- Origin: /retro 2026-07-31, row in observe/feedback-log.jsonl. Four of the seven
+     items that session were guardrails the user wrote in ADVANCE, against failure
+     modes nothing in the repo prevented by default; he should not have had to. These
+     rules are those guardrails made standing. They are predictions, not proven fixes —
+     if one stops earning its place, delete it rather than let it calcify. -->
+
+**Verify a premise before offering it as a choice.** A question put to the user is an
+assertion: it steers the decision as hard as a claim does. Check every factual premise in
+the options *first*, and say where you checked it.
+
+The cost of skipping this, observed 2026-07-31: a question asserted that
+`memory/project-vision.md`'s deferred list overlapped `LIMITATIONS.md`. It did not — the
+two are disjoint. The option chosen on that basis, followed literally, would have deleted
+"animation: explicitly deferred by the user, do not pick this up unprompted", which
+nothing else in the repo records.
+
+**A claim that the harness works needs a direct probe.** What is in context proves nothing
+about what ran: hooks load at session start, so one installed mid-session did not run for
+that session, and a memory index visible in context is not evidence that anything loaded
+it. Cite the probe — the command and its output.
+
+- **"Not yet determined" is a permitted verdict**, and often the only honest one. On
+  2026-07-31 the usage-log capture check was genuinely undetermined mid-session (`Stop`
+  had had no occasion to fire); calling it either "working" or "broken" would have been
+  wrong. The answer came from a read-only watcher that outlived the turn.
+- **Never write to the artifact you are measuring in order to make a check pass.**
+  Hand-running the usage hook would have produced a row and a false green on the one file
+  under test.
+- A negative result is a finding. Report it plainly instead of explaining it away.
+
+**In a multi-task session, rebuild the report — don't accumulate it.** Deliver one
+consolidated summary that stands on its own at each checkpoint, rather than prose spread
+across turns. A long agentic run scatters the report through the same scroll as the tool
+calls, and correct, finished work then reads as buried. Repetition is the intended cost.
+
 ## Known limitations
 
 `LIMITATIONS.md` lists what the scene model and editor genuinely cannot do, as opposed to
@@ -58,6 +95,12 @@ file and add a one-line pointer to `memory/MEMORY.md`.
 
 - Always update `memory/MEMORY.md` when adding or removing a topic file.
 - Remove stale entries; stale memory is worse than no memory.
+- **When the user gives a reason for a decision, record the reason — not just the
+  outcome — in the same turn.** A decision that came from tooling will be re-proposed,
+  and the rationale is the only thing that answers it next time; the outcome alone just
+  restarts the argument. `memory/agent-roster.md` exists for exactly this: the proposal
+  to delete `claim-auditor` and `red-team` will regenerate, and what settles it is *why*
+  they are held. This is the memory-side form of the `LIMITATIONS.md` rule above.
 
 ## Agent roles
 
