@@ -149,6 +149,11 @@ export interface SceneModel {
   layers: Layer[];
   entities: BaseEntity[];
   arrows: Arrow[];
-  /** Ordered, and always grouped by layer following `layers`. */
+  /**
+   * Playback order. Steps on one layer usually run together, but they need not:
+   * the argument is free to return to a layer it has already drawn — the games
+   * example climbs its ladder at step 3 and comes back to sum it at step 8.
+   * See layerRuns() (src/scene.ts), which is what groups them for display.
+   */
   steps: SceneStep[];
 }

@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import type { Proof } from './types';
-import { streamCipherProof } from './proof';
-import { sequenceOfGamesProof } from './gamesProof';
+import { BUILTIN_SCENES } from './scenes';
+import { compileScene } from './scene';
 import Viewer from './Viewer';
 import EditorApp from './editor/EditorApp';
 import type { AppMode } from './ModeToggle';
 
-const builtinProofs = [streamCipherProof, sequenceOfGamesProof];
+// The examples are authored as layered scenes and compiled here, by the same
+// path an authored scene takes on its way to the viewer.
+const builtinProofs = BUILTIN_SCENES.map(compileScene);
 
 /**
  * App shell: switches between the read-only Viewer and the interactive editor,

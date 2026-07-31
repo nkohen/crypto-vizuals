@@ -1,9 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import { compileScene, normalizeScene } from './scene';
 import { proofToScene } from './proofToScene';
-import { streamCipherProof } from './proof';
-import { sequenceOfGamesProof } from './gamesProof';
+import { streamCipherScene, sequenceOfGamesScene } from './scenes';
 import type { Arrow, BaseEntity, Proof, SceneModel } from './types';
+
+// The converter's job is to take in a Proof that nothing authored as a scene —
+// a hand-written one, or one exported by an older build. The built-in examples
+// compiled back down to Proofs are the most demanding such input to hand it:
+// they reuse ids across steps and re-position entities from step to step, which
+// is exactly what the converter has to unpick.
+const streamCipherProof = compileScene(streamCipherScene);
+const sequenceOfGamesProof = compileScene(sequenceOfGamesScene);
 
 // An absent caption and an empty caption both render as nothing; the converter
 // normalises to '' so the value survives JSON. Compare them as equal.
@@ -121,13 +128,61 @@ describe.each([
   });
 });
 
+// The strategy tests below use purpose-built inputs rather than the examples.
+// The examples are authored as layered scenes now, so they no longer collide
+// their own ids — which is the point of them, but it means they no longer
+// exercise the unpicking the converter exists to do. A hand-written Proof still
+// can, so these spell out that shape directly.
+
+/** One entity across several steps, which is all these behaviours turn on. */
+const stepsOf = (versions: BaseEntity[]): Proof => ({
+  id: 'fixture',
+  title: 'Fixture',
+  subtitle: '',
+  theorem: '',
+  steps: versions.map((e, i) => ({
+    id: `s${i + 1}`,
+    title: `Step ${i + 1}`,
+    tag: '',
+    narration: [''],
+    claim: '',
+    entities: [e],
+    arrows: [],
+  })),
+});
+
+const node = (patch: Partial<BaseEntity> = {}): BaseEntity => ({
+  id: 'b',
+  kind: 'box',
+  role: 'internal',
+  x: 0,
+  y: 0,
+  w: 100,
+  h: 50,
+  label: 'B',
+  ...patch,
+});
+
 describe('conversion strategy', () => {
   it('splits arrow ids that meant different connections in different steps', () => {
-    // Both source proofs reuse a1..a4; a scene defines arrows once, so those
-    // have to become separate arrows rather than one arrow that mutates.
-    const report = proofToScene(streamCipherProof);
+    // A hand-written proof is free to reuse `a1` for whatever each step needs;
+    // a scene defines arrows once, so those become separate arrows rather than
+    // one arrow that mutates as the timeline moves.
+    const ends = [node({ id: 'p' }), node({ id: 'q', x: 300 }), node({ id: 'r', x: 600 })];
+    const proof: Proof = {
+      id: 'fixture',
+      title: 'Fixture',
+      subtitle: '',
+      theorem: '',
+      steps: [
+        { id: 's1', title: '', tag: '', narration: [''], claim: '', entities: ends, arrows: [{ id: 'a1', from: 'p', to: 'q' }] },
+        { id: 's2', title: '', tag: '', narration: [''], claim: '', entities: ends, arrows: [{ id: 'a1', from: 'q', to: 'r' }] },
+      ],
+    };
+
+    const report = proofToScene(proof);
     expect(report.splitArrowIds).toContain('a1');
-    expect(report.scene.arrows.length).toBeGreaterThan(report.splitArrowIds.length);
+    expect(report.scene.arrows).toHaveLength(2);
   });
 
   it('shares one arrow between steps that draw the identical connection', () => {
@@ -137,29 +192,27 @@ describe('conversion strategy', () => {
   });
 
   it('picks the modal geometry as the base, minimising overrides', () => {
-    // adv-a sits at (420,210,240,150) in two steps and (470,250,300,170) in six,
-    // so the base is the latter and only the minority steps need an override.
-    const { scene } = proofToScene(streamCipherProof);
-    const advA = scene.entities.find((e) => e.id === 'adv-a');
-    expect([advA?.x, advA?.y, advA?.w, advA?.h]).toEqual([470, 250, 300, 170]);
-
-    const overriding = scene.steps.filter((s) => s.overrides?.['adv-a']).length;
-    expect(overriding).toBeLessThan(scene.steps.length / 2);
+    // The box sits at (90,90) in three steps and (10,10) in one, so the base is
+    // the majority position and only the odd step out needs an override.
+    const { scene } = proofToScene(
+      stepsOf([node({ x: 10, y: 10 }), node({ x: 90, y: 90 }), node({ x: 90, y: 90 }), node({ x: 90, y: 90 })]),
+    );
+    const box = scene.entities.find((e) => e.id === 'b');
+    expect([box?.x, box?.y]).toEqual([90, 90]);
+    expect(scene.steps.filter((s) => s.overrides?.['b']).map((s) => s.id)).toEqual(['s1']);
   });
 
   it('captures a caption that only one step shows', () => {
-    const { scene } = proofToScene(streamCipherProof);
-    const step4 = scene.steps.find((s) => s.id === 'assume-break');
-    expect(step4?.overrides?.['adv-a']?.caption).toBe('wins with adv. $\\varepsilon$');
+    const { scene } = proofToScene(stepsOf([node(), node({ caption: 'only here' }), node()]));
+    expect(scene.entities.find((e) => e.id === 'b')?.caption).toBeUndefined();
+    expect(scene.steps.find((s) => s.id === 's2')?.overrides?.['b']?.caption).toBe('only here');
   });
 
   it('captures a role that changes as the argument advances', () => {
-    // gamesProof recolours its keystream blocks step by step.
-    const { scene } = proofToScene(sequenceOfGamesProof);
-    const rolesOverridden = scene.steps.some((s) =>
-      Object.values(s.overrides ?? {}).some((o) => o.role !== undefined),
-    );
-    expect(rolesOverridden).toBe(true);
+    // A recoloured entity — pseudorandom becoming uniform, say.
+    const { scene } = proofToScene(stepsOf([node(), node(), node({ role: 'input' })]));
+    expect(scene.entities.find((e) => e.id === 'b')?.role).toBe('internal');
+    expect(scene.steps.find((s) => s.id === 's3')?.overrides?.['b']?.role).toBe('input');
   });
 
   it('produces a scene the editor can load unchanged', () => {

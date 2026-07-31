@@ -15,11 +15,9 @@ import {
 } from 'lucide-react';
 import type { EntityKind, EntityRole, Proof, SceneModel } from '../types';
 import { W, H } from '../diagram/geometry';
-import { blankScene, compileScene, layerContents, makeEntity } from '../scene';
+import { blankScene, compileScene, layerContents, makeEntity, normalizeScene } from '../scene';
 import LayersPanel from './LayersPanel';
-import { proofToScene } from '../proofToScene';
-import { streamCipherProof } from '../proof';
-import { sequenceOfGamesProof } from '../gamesProof';
+import { BUILTIN_SCENES } from '../scenes';
 import ModeToggle, { type AppMode } from '../ModeToggle';
 import ReductionDiagram from '../ReductionDiagram';
 import { canRedo, canUndo, historyReducer, initHistory } from './history';
@@ -49,7 +47,7 @@ interface Props {
 }
 
 /** Worked proofs a student can open and take apart. */
-const EXAMPLES: Proof[] = [streamCipherProof, sequenceOfGamesProof];
+const EXAMPLES: SceneModel[] = BUILTIN_SCENES;
 
 export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props) {
   const [history, dispatch] = useReducer(historyReducer, undefined, () =>
@@ -234,11 +232,15 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
     tour.start();
   };
 
-  /** Convert a hand-authored proof into an editable scene and open it. */
-  const loadExample = (proof: Proof) => {
+  /**
+   * Open a worked example. The built-ins are authored as scenes, so this hands
+   * over the author's own document — layers and all — rather than a conversion
+   * of it. Copied on the way in so editing one can't mutate the module constant.
+   */
+  const loadExample = (example: SceneModel) => {
     setShowExamples(false);
-    if (scene.entities.length && !confirm(`Replace the current scene with “${proof.title}”?`)) return;
-    replaceScene(proofToScene(proof).scene);
+    if (scene.entities.length && !confirm(`Replace the current scene with “${example.title}”?`)) return;
+    replaceScene(normalizeScene(JSON.parse(JSON.stringify(example)) as SceneModel));
   };
 
   /** Reopen a scene from a previous session's autosave. */
@@ -313,7 +315,9 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
                         className="block w-full px-3 py-2 text-left text-xs text-ink-200 transition hover:bg-ink-700/60"
                       >
                         <span className="block font-medium">{p.tabLabel ?? p.title}</span>
-                        <span className="block text-[10px] text-ink-500">{p.steps.length} steps · {p.title}</span>
+                        <span className="block text-[10px] text-ink-500">
+                          {p.layers.length} layers · {p.steps.length} steps
+                        </span>
                       </button>
                     ))}
                     {recent.length > 0 && (
