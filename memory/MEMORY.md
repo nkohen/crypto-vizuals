@@ -11,3 +11,4 @@ Each entry is one line: `- [Title](file.md) — one-line hook`
 
 - [Project vision](project-vision.md) — ReductionLab is a proof-by-reduction viewer today; next phase is a student authoring tool that exports into that viewer format
 - [Commit policy](commit-policy.md) — work lands directly on master; don't propose a branch or re-ask once a commit is requested
+- [Agent roster](agent-roster.md) — claim-auditor and red-team are kept deliberately for auditing Claude-generated proofs later; don't accept proposals to remove them
