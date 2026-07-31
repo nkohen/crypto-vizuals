@@ -131,7 +131,7 @@ export default function StepsPanel({
         </button>
       </div>
 
-      <div className="grid lg:grid-cols-[1fr_260px]">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_300px]">
         {/* ── step text ─────────────────────────────────────────────── */}
         <div className="p-4 space-y-3.5 lg:border-r border-ink-700/60">
           <div className="flex items-center gap-1.5">
@@ -187,71 +187,79 @@ export default function StepsPanel({
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-[1fr_150px] gap-3">
-            <Field label="Title">
-              <input className={inputCls} value={step.title} onChange={(e) => patch({ title: e.target.value }, `step-title:${step.id}`)} />
-            </Field>
-            <Field label="Tag">
-              <input
-                className={inputCls}
-                placeholder="e.g. Setup"
-                value={step.tag}
-                onChange={(e) => patch({ tag: e.target.value }, `step-tag:${step.id}`)}
-              />
-            </Field>
-          </div>
-
-          <Field label="Narration (one block per paragraph, supports $LaTeX$)">
-            <div className="space-y-2">
-              {step.narration.map((para, i) => (
-                <div key={i} className="flex gap-1.5">
-                  <textarea
+          {/* Two columns once there is room: what the step says on the left,
+              what it concludes on the right. Stacks below xl. */}
+          <div className="grid gap-x-6 gap-y-3.5 xl:grid-cols-2 items-start">
+            <div className="space-y-3.5">
+              <div className="grid sm:grid-cols-[1fr_150px] gap-3">
+                <Field label="Title">
+                  <input className={inputCls} value={step.title} onChange={(e) => patch({ title: e.target.value }, `step-title:${step.id}`)} />
+                </Field>
+                <Field label="Tag">
+                  <input
                     className={inputCls}
-                    rows={2}
-                    value={para}
-                    onChange={(e) => setNarration(step.narration.map((p, j) => (j === i ? e.target.value : p)), `narration:${step.id}:${i}`)}
+                    placeholder="e.g. Setup"
+                    value={step.tag}
+                    onChange={(e) => patch({ tag: e.target.value }, `step-tag:${step.id}`)}
                   />
-                  {step.narration.length > 1 && (
-                    <button
-                      onClick={() => setNarration(step.narration.filter((_, j) => j !== i))}
-                      title="Remove paragraph"
-                      className="shrink-0 self-start rounded-md border border-ink-600/70 p-1 text-ink-500 transition hover:border-rose2-500/40 hover:text-rose2-300"
-                    >
-                      <X size={12} />
-                    </button>
-                  )}
+                </Field>
+              </div>
+
+              <Field label="Narration (one block per paragraph, supports $LaTeX$)">
+                <div className="space-y-2">
+                  {step.narration.map((para, i) => (
+                    <div key={i} className="flex gap-1.5">
+                      <textarea
+                        className={inputCls}
+                        rows={2}
+                        value={para}
+                        onChange={(e) => setNarration(step.narration.map((p, j) => (j === i ? e.target.value : p)), `narration:${step.id}:${i}`)}
+                      />
+                      {step.narration.length > 1 && (
+                        <button
+                          onClick={() => setNarration(step.narration.filter((_, j) => j !== i))}
+                          title="Remove paragraph"
+                          className="shrink-0 self-start rounded-md border border-ink-600/70 p-1 text-ink-500 transition hover:border-rose2-500/40 hover:text-rose2-300"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                  <button
+                    onClick={() => setNarration([...step.narration, ''])}
+                    className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] font-medium text-ink-400 transition hover:bg-ink-800/60 hover:text-ink-200"
+                  >
+                    <Plus size={12} /> Add paragraph
+                  </button>
                 </div>
-              ))}
-              <button
-                onClick={() => setNarration([...step.narration, ''])}
-                className="flex items-center gap-1.5 rounded-md px-1.5 py-1 text-[11px] font-medium text-ink-400 transition hover:bg-ink-800/60 hover:text-ink-200"
-              >
-                <Plus size={12} /> Add paragraph
-              </button>
+                {step.narration.some(Boolean) && (
+                  <Preview>
+                    {step.narration.filter(Boolean).map((p, i) => (
+                      <p key={i} className={i ? 'mt-2' : undefined}>
+                        {renderRichText(p)}
+                      </p>
+                    ))}
+                  </Preview>
+                )}
+              </Field>
             </div>
-            {step.narration.some(Boolean) && (
-              <Preview>
-                {step.narration.filter(Boolean).map((p, i) => (
-                  <p key={i} className={i ? 'mt-2' : undefined}>
-                    {renderRichText(p)}
-                  </p>
-                ))}
-              </Preview>
-            )}
-          </Field>
 
-          <Field label="Claim">
-            <input className={inputCls} value={step.claim} onChange={(e) => patch({ claim: e.target.value }, `step-claim:${step.id}`)} />
-            {step.claim ? <Preview>{renderRichText(step.claim)}</Preview> : null}
-          </Field>
+            <div className="space-y-3.5">
+              <Field label="Claim">
+                <input className={inputCls} value={step.claim} onChange={(e) => patch({ claim: e.target.value }, `step-claim:${step.id}`)} />
+                {step.claim ? <Preview>{renderRichText(step.claim)}</Preview> : null}
+              </Field>
 
-          <Field label="Diagram note (caption pill under the diagram)">
-            <input
-              className={inputCls}
-              value={step.diagramNote ?? ''}
-              onChange={(e) => patch({ diagramNote: e.target.value || undefined }, `step-note:${step.id}`)}
-            />
-          </Field>
+              <Field label="Diagram note (caption pill under the diagram)">
+                <input
+                  className={inputCls}
+                  value={step.diagramNote ?? ''}
+                  onChange={(e) => patch({ diagramNote: e.target.value || undefined }, `step-note:${step.id}`)}
+                />
+              </Field>
+            </div>
+          </div>
         </div>
 
         {/* ── per-step visibility ───────────────────────────────────── */}

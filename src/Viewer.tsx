@@ -57,7 +57,7 @@ export default function Viewer({ proofs, initialProofIndex = 0, mode, onModeChan
     <div className="min-h-screen bg-ink-950 text-ink-100 flex flex-col">
       {/* Header */}
       <header className="border-b border-ink-700/50 bg-ink-900/80 backdrop-blur-sm sticky top-0 z-20">
-        <div className="mx-auto max-w-7xl px-6 py-3.5 flex items-center justify-between gap-4">
+        <div className="shell py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-500/30 to-accent-700/20 border border-accent-500/30">
               <Layers size={20} className="text-accent-300" />
@@ -107,7 +107,7 @@ export default function Viewer({ proofs, initialProofIndex = 0, mode, onModeChan
 
       {/* Example switcher */}
       <div className="border-b border-ink-700/50 bg-ink-900/60">
-        <div className="mx-auto max-w-7xl px-6 py-2 flex items-center gap-2 overflow-x-auto scroll-thin">
+        <div className="shell py-2 flex items-center gap-2 overflow-x-auto scroll-thin">
           <span className="text-[11px] uppercase tracking-wider text-ink-500 font-medium mr-1 shrink-0">
             Example
           </span>
@@ -129,7 +129,7 @@ export default function Viewer({ proofs, initialProofIndex = 0, mode, onModeChan
 
       {/* Theorem banner */}
       <div className="border-b border-ink-700/50 bg-ink-900/40">
-        <div className="mx-auto max-w-7xl px-6 py-3">
+        <div className="shell py-3">
           <div className="flex items-start gap-2.5">
             <span className="mt-0.5 text-[10px] font-bold uppercase tracking-wider text-amber2-400 bg-amber2-500/10 border border-amber2-500/25 rounded px-1.5 py-0.5 shrink-0">
               Theorem
@@ -140,8 +140,8 @@ export default function Viewer({ proofs, initialProofIndex = 0, mode, onModeChan
       </div>
 
       {/* Main layout */}
-      <main className="mx-auto max-w-7xl w-full px-6 py-6 flex-1">
-        <div className="grid lg:grid-cols-[260px_1fr_360px] gap-5">
+      <main className="shell py-6 flex-1">
+        <div className="grid lg:grid-cols-[260px_minmax(0,1fr)_360px] gap-5">
           {/* Step rail */}
           <aside className="order-2 lg:order-1">
             <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden">
@@ -199,6 +199,9 @@ export default function Viewer({ proofs, initialProofIndex = 0, mode, onModeChan
                   entities={step.entities}
                   arrows={step.arrows}
                   note={step.diagramNote}
+                  // Grows with the window, but stays short enough that the step
+                  // controls beneath it remain on screen without scrolling.
+                  sizeClass="w-full h-auto max-h-[62vh]"
                 />
               </div>
 
@@ -233,7 +236,7 @@ export default function Viewer({ proofs, initialProofIndex = 0, mode, onModeChan
 
       {/* Footer */}
       <footer className="border-t border-ink-700/50 bg-ink-900/40">
-        <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between text-xs text-ink-500">
+        <div className="shell py-3 flex items-center justify-between text-xs text-ink-500">
           <span>ReductionLab — {proof.title}</span>
           <span className="font-mono">v0.1 · MVP</span>
         </div>

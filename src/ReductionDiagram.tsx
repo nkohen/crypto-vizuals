@@ -16,6 +16,16 @@ interface Props {
    * and standalone SVG export.
    */
   background?: string;
+  /**
+   * Sizing for the <svg> itself. The default fills the container's width and
+   * takes whatever height the aspect ratio implies.
+   *
+   * The viewer overrides it to also cap the height against the window, so a
+   * large screen doesn't push the narration below the fold. Print and SVG
+   * export must keep the default: a viewport-relative cap means nothing on a
+   * printed page or in a serialized file, and would letterbox both.
+   */
+  sizeClass?: string;
 }
 
 /**
@@ -23,13 +33,19 @@ interface Props {
  * styling, and per-element rendering is shared with the editor via the
  * ./diagram primitives, so authored scenes look identical when exported.
  */
-export default function ReductionDiagram({ entities, arrows, note, background }: Props) {
+export default function ReductionDiagram({
+  entities,
+  arrows,
+  note,
+  background,
+  sizeClass = 'w-full h-auto',
+}: Props) {
   const idMap = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities]);
   const sorted = useMemo(() => sortEntitiesForRender(entities), [entities]);
 
   return (
     <div className="relative w-full">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img">
+      <svg viewBox={`0 0 ${W} ${H}`} className={sizeClass} role="img">
         <DiagramDefs />
 
         {background && <rect width={W} height={H} fill={background} />}

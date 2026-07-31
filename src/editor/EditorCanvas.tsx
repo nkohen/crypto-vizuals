@@ -230,7 +230,10 @@ export default function EditorCanvas({
     <svg
       ref={svgRef}
       viewBox={`0 0 ${W} ${H}`}
-      className="w-full h-auto touch-none select-none"
+      // Fills the column, but never so tall that the timeline below it drops off
+      // the page. Pointer maths goes through getScreenCTM, so it stays correct
+      // at any scale, including when the height cap letterboxes the drawing.
+      className="w-full h-auto max-h-[54vh] touch-none select-none"
       style={{ cursor: cursorFor(false) }}
       onPointerDown={onBackgroundPointerDown}
       onPointerMove={onSvgPointerMove}

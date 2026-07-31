@@ -48,6 +48,17 @@ body {
   font-size: 1em;
 }
 
+/* One page width for the whole app — header, body and footer all line up on it.
+   Fills the window rather than sitting in a fixed column, up to a cap that
+   keeps the narration a readable measure; the diagram takes the rest, which is
+   what it wants and what a fixed 1280 column was denying it on a large screen. */
+.shell {
+  margin-inline: auto;
+  width: 100%;
+  max-width: 1760px;
+  padding-inline: 1.5rem;
+}
+
 .kbd {
   font-family: 'JetBrains Mono', monospace;
   font-size: 0.68rem;

@@ -256,7 +256,7 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
     <div className="min-h-screen bg-ink-950 text-ink-100 flex flex-col print-hide">
       {/* Header */}
       <header className="border-b border-ink-700/50 bg-ink-900/80 backdrop-blur-sm sticky top-0 z-20">
-        <div className="mx-auto max-w-7xl px-6 py-3.5 flex items-center justify-between gap-4">
+        <div className="shell py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-500/30 to-accent-700/20 border border-accent-500/30">
               <Layers size={20} className="text-accent-300" />
@@ -367,8 +367,10 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
       </header>
 
       {/* Main layout */}
-      <main className="mx-auto max-w-7xl w-full px-6 py-6 flex-1">
-        <div className="grid lg:grid-cols-[220px_1fr_320px] gap-5">
+      <main className="shell py-6 flex-1 space-y-5">
+        {/* The rails are fixed; the canvas takes everything else the window has.
+            minmax(0,…) so a wide diagram can't push the column past its share. */}
+        <div className="grid lg:grid-cols-[220px_minmax(0,1fr)_320px] gap-5">
           <aside className="order-2 lg:order-1 space-y-5">
             <Palette onAdd={addEntity} tool={tool} onToolChange={setTool} />
             <LayersPanel
@@ -454,16 +456,6 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
                 )}
               </p>
             </div>
-
-            <StepsPanel
-              scene={scene}
-              step={step}
-              stepIndex={stepIndex}
-              onSelectStep={setActiveStepId}
-              dispatch={dispatch}
-              tool={tool}
-              onToolChange={setTool}
-            />
           </section>
 
           <section className="order-3">
@@ -478,10 +470,22 @@ export default function EditorApp({ mode, onModeChange, onOpenInViewer }: Props)
             />
           </section>
         </div>
+
+        {/* Full width rather than stacked under the canvas: the timeline chips
+            and the narration fields were the most cramped thing on the page. */}
+        <StepsPanel
+          scene={scene}
+          step={step}
+          stepIndex={stepIndex}
+          onSelectStep={setActiveStepId}
+          dispatch={dispatch}
+          tool={tool}
+          onToolChange={setTool}
+        />
       </main>
 
       <footer className="border-t border-ink-700/50 bg-ink-900/40">
-        <div className="mx-auto max-w-7xl px-6 py-3 flex items-center justify-between text-xs text-ink-500">
+        <div className="shell py-3 flex items-center justify-between text-xs text-ink-500">
           <span>ReductionLab — editing “{scene.title}”</span>
           <span className="font-mono">
             {scene.layers.length} layers · {scene.entities.length} nodes · {scene.arrows.length} arrows ·{' '}
