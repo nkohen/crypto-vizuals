@@ -23,7 +23,12 @@ artifacts here. That proposal was **deferred, not denied**: the observation is
 accurate, the conclusion is premature. If it appears again, defer it again
 unless the authoring/proof-checking direction has actually been abandoned.
 
-Note that CLAUDE.md's "Agent roles" section lists only three roles
-(`researcher`, `code-reviewer`, `/friction`) and does not mention these two —
-that mismatch is what the proposal keeps detecting. Documenting them there would
-settle it.
+The mismatch that kept triggering the proposal — CLAUDE.md listing three roles
+while `.claude/agents/` shipped five — was closed on 2026-07-31: both agents are
+now documented in CLAUDE.md's "Agent roles" section, under a "held for future
+use" heading that states the reason and their fixed order
+(draft → `claim-auditor` → `red-team` → commit).
+
+If `drop-ledger-reviewer-agents` still resurfaces after that, the trigger is
+their genuine idleness rather than a docs gap, and the answer is the same: defer
+while the authoring direction stands.

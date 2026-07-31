@@ -63,7 +63,10 @@ file and add a one-line pointer to `memory/MEMORY.md`.
 
 <!-- [Conv #3, counter-pattern to wshobson/agents n=127 and ruvnet/claude-flow n=280]
      Large rosters cause overlap and trigger-collision. This harness keeps roles small.
-     Three roles: researcher (proofs & integration docs), code-reviewer (correctness), /friction. -->
+     Active: researcher (proofs & integration docs), code-reviewer (correctness), /friction.
+     Held: claim-auditor + red-team, listed below so the roster here matches
+     .claude/agents/ — an undocumented agent reads as furniture and gets proposed
+     for deletion. See memory/agent-roster.md. -->
 
 - `researcher` — research security-reduction-proof literature, KaTeX/React/Vite
   documentation, the in-tree paper, and the cryptocamp project for integration. Does NOT
@@ -72,6 +75,25 @@ file and add a one-line pointer to `memory/MEMORY.md`.
   and no leaked secrets. Does NOT implement features.
 - `/friction` — log a decision-grade friction entry to the observe loop when something
   goes wrong. Run immediately; no ceremony.
+
+**Proof-claim reviewers — held for future use.** Both are read-only and neither
+implements anything. This repo has no claims ledger yet, so they are idle by design:
+they are kept for auditing *generated* proofs once the authoring tool lands, not left
+over by accident. Do not remove them as unused.
+
+- `claim-auditor` — the compute-free **draft gate**, and it runs **first**. Given one
+  written artifact, it asks only whether each stated conclusion is actually *entailed by
+  the grounds that text itself cites*, and whether scope and strength are honestly
+  qualified. It does not attack the substance or re-verify numbers. Returns the
+  over-scoped claims plus the minimal hedge each needs.
+- `red-team` — the **survival gate**, and it runs **second**. Given one claim, it asks
+  whether the claim is *true*: it maps the attack surface, picks the cheapest falsifier,
+  and actually runs it. Returns the verdict and a ready-to-append entry; it does not
+  write to any ledger itself.
+
+The two compose in a fixed order — draft → `claim-auditor` → `red-team` → commit.
+Keeping that order matters: the reason this pair went unused in the project they came
+from was that their triggers were indistinguishable.
 
 ## Observe loop
 
