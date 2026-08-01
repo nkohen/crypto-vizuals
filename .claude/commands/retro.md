@@ -101,6 +101,23 @@ EOF
    any of them unprompted; he decides, and whatever he endorses is normal
    directed work from there.
 
+5. **Run the memory-index check** as the last step and report the result in
+   one line. Use the project's own check if it has one (a `/memory-check`
+   command or similar); otherwise compare `memory/MEMORY.md` against the topic
+   files actually present and say whether they agree. If it reports drift,
+   OFFER to fix the index — change nothing without the user's explicit OK.
+
+   <!-- Harvested from learning-edge 2026-07-31 (slot 7), where this step was
+        added locally and then pulled into the template on the user's call.
+        Two reasons it belongs at the end of a RETRO specifically. First,
+        timing: a retro is when topic files get written, so it is exactly when
+        the index drifts. Second, and the general lesson — that target's own
+        review found its memory-check command had ZERO invocations since being
+        installed, for the stated reason "I don't remember it, which is why I
+        haven't been using it". A zero-invocation count there measured RECALL,
+        not worth, and the fix for a tool nothing surfaces is to hang it off a
+        ritual that already runs. -->
+
 **Scoping when several agents share this repo:** the retro covers the
 feedback given in THIS conversation only. Other sessions run their own
 retros; their rows in the shared log are theirs to have written, not yours
