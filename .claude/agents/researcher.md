@@ -1,6 +1,7 @@
 ---
 name: researcher
 description: Domain & docs researcher for crypto-vizuals — reads security-reduction-proof literature, KaTeX/React/Vite docs, the in-tree paper, and the cryptocamp project. Does NOT write or modify code.
+tools: Read, Grep, Glob, WebFetch, WebSearch
 ---
 
 # Researcher — crypto-vizuals

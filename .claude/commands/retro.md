@@ -27,6 +27,29 @@ never append an empty row.
    logged with `/friction` — those rows belong to the reflection loop's
    stream, and re-surfacing them here double-counts the same pain.
 
+   **Start each item with its KIND, exactly as spelled here** — the reader of
+   this log matches these prefixes literally, and an item without one is
+   counted but not classified:
+
+   - `Pre-emptive guardrail:` — he wrote an instruction into his prompt to
+     stop something BEFORE it happened ("read each file before you move it",
+     "report those to me rather than deciding them yourself"). **These are the
+     most valuable rows in the log**: he had to hand-write something the
+     harness should have carried, and unlike a complaint it arrives with the
+     fix already stated in his words. Do not fold them into the reactive
+     items — being told off is not the same evidence as being pre-empted.
+   - `Substantive rationale the agent did not have:` — he supplied a REASON
+     that was recorded nowhere (why an artifact is being kept, what a
+     component is for). The decision was answerable only because he was in
+     the room.
+   - `Reactive:` — he corrected or complained AFTER the fact.
+   - `Self-observed:` — you noticed it yourself and he did not complain, but
+     it shaped what he decided. Include these; a wrong premise he acted on
+     is evidence even when he never noticed it.
+
+   If an item genuinely fits none, write it without a prefix rather than
+   forcing one — a mislabelled item is worse than an unlabelled one.
+
 2. **Ask the counterfactual question — of yourself, seriously:**
 
    > What reasonable structural changes could we make to this project that

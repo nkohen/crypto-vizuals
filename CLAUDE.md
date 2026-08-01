@@ -95,6 +95,11 @@ file and add a one-line pointer to `memory/MEMORY.md`.
 
 - Always update `memory/MEMORY.md` when adding or removing a topic file.
 - Remove stale entries; stale memory is worse than no memory.
+- **Before moving or merging memory between sources, read each one first.** If two records
+  could conflict — the in-repo `memory/` versus anything you would fold into it — surface
+  the contradiction to the user instead of silently reconciling it. The in-repo `memory/`
+  is the canonical store; do not stash cross-session context in the platform's own
+  auto-memory, which is not loaded here.
 - **When the user gives a reason for a decision, record the reason — not just the
   outcome — in the same turn.** A decision that came from tooling will be re-proposed,
   and the rationale is the only thing that answers it next time; the outcome alone just

@@ -1,6 +1,7 @@
 ---
 name: code-reviewer
 description: Correctness reviewer for crypto-vizuals — checks changes for TypeScript correctness, faithful KaTeX rendering, and secret-leak prevention. Does NOT implement features.
+tools: Read, Grep, Glob, Bash
 ---
 
 # Code Reviewer — crypto-vizuals

@@ -26,6 +26,26 @@ Mechanically enforces three constraints:
    blocked — only shell-level detachment that orphans work outside the session's
    completion tracking.
 
+MATCHING IS ON PARSED COMMANDS, NOT RAW COMMAND TEXT. A blocklist matched
+against the whole command string refuses any command whose ARGUMENTS merely
+mention a blocked keyword: a `git commit` whose message describes this guard is
+not a destructive command, but a whole-string scan cannot tell the difference.
+That false positive was observed twice on a deployed target (2026-07-15 on the
+append-only rule, 2026-07-31 on the run-to-completion rule), costing a reworded
+commit and a commit-through-a-file workaround. So this scanner lexes the command
+into SIMPLE COMMANDS — respecting quotes, dropping heredoc bodies, splitting on
+shell operators — and then matches command keywords only in COMMAND position and
+protected paths only in ARGUMENT or REDIRECT position. Text a command merely
+CARRIES is data, never a command. When the lexer cannot make sense of the string
+(an unbalanced quote), it re-parses with quoting stripped rather than falling
+back to a whole-string scan: still parsed, still command-position, never weaker
+about what actually runs.
+
+The one place that reasoning inverts: a heredoc body fed to a SHELL is not data,
+it is a script, so those bodies are scanned as commands in their own right
+(`bash <<EOF`, `cat <<EOF | sh`). Dropping every body unconditionally would have
+turned this fix into a bypass — caught on a target before it shipped there.
+
 Exit code 2 = PreToolUse blocking signal. Everything else exits 0 (allow).
 Fail-open on internal errors: a bug here weakens defense-in-depth but never wedges
 the session. The settings.json permission deny-list remains the underlying layer.
@@ -35,85 +55,347 @@ Stdlib-only, Python 3.8+ compatible.
 import json
 import re
 import sys
-from typing import Optional
+from typing import List, Optional, Tuple
 
 OBSERVE_LOG = "observe-log.jsonl"
 
+# ---------------------------------------------------------------------------
+# Lexer — shell text to (kind, value) tokens
+# ---------------------------------------------------------------------------
 
-def _code_view(cmd: str) -> str:
-    """Blank quoted string literals so narrated destructive content doesn't false-positive."""
-    cmd = re.sub(r"'[^']*'", " ", cmd)
-    cmd = re.sub(r'"[^"]*"', " ", cmd)
-    return cmd
+_OPERATOR_CHARS = frozenset("\n;|&()<>")
+
+# Longest first: a run of operator characters is consumed greedily against this
+# table, so `&&` never reads as a background `&` and `&>>` never as a truncating
+# `&>`.
+_OPERATORS = (
+    "&>>", "&&", "||", ";;", "|&", ">>", "<<", "<&", ">&", "&>", ">|",
+    "\n", ";", "|", "&", "(", ")", "<", ">",
+)
+
+_REDIRECTS = frozenset({">", ">>", "<", "<<", "<&", ">&", "&>", "&>>", ">|"})
+# Redirections that DESTROY the existing contents of their target.
+_TRUNCATING = frozenset({">", ">|", "&>"})
+
+# Heredoc introducer: `<<EOF`, `<<-EOF`, `<<'EOF'`, `<< "EOF"`. Its BODY is data
+# fed to a command's stdin, never commands, so the body lines are dropped before
+# lexing. (`<<<` here-strings do not match: no identifier follows the third `<`.)
+_HEREDOC_RE = re.compile(r"<<-?[ \t]*(?P<q>['\"]?)(?P<d>[A-Za-z_][A-Za-z0-9_]*)(?P=q)")
+
+_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
+
+# Commands that RUN another command given as their arguments. `sudo rm -r x`,
+# `xargs rm -rf` and `timeout 5 rm -r x` all really run `rm`, so a check that
+# looked only at the first word of a simple command would miss them.
+_WRAPPERS = frozenset({
+    "sudo", "doas", "env", "nohup", "setsid", "time", "timeout", "nice",
+    "ionice", "xargs", "command", "exec", "builtin", "stdbuf", "chroot",
+})
+
+# Command names any check below cares about. Inside a WRAPPER's arguments the
+# wrapped command is found by looking for one of these rather than by counting
+# flags — `xargs -I {} rm -rf {}` has no parseable flag grammar, and guessing
+# which flags take a value is how `sudo -u alice rm -rf /` slips through.
+_TRACKED = frozenset({
+    "rm", "find", "chmod", "curl", "wget", "mv", "truncate", "sed", "tee",
+    "disown",
+})
+
+_SHELLS = frozenset({"sh", "bash", "zsh", "ksh", "dash", "fish"})
+# Separators that hand a downloader's output straight to a shell.
+_PIPE_INTO = frozenset({"|", "|&", "&&", ";"})
+# A heredoc whose introducing line names a shell feeds that shell a SCRIPT, so
+# its body is commands and must be scanned. Everything else receives DATA.
+_SHELL_ON_LINE_RE = re.compile(r"\b(?:" + "|".join(sorted(_SHELLS)) + r")\b")
+_MAX_HEREDOC_DEPTH = 4       # a script body may itself carry a heredoc
 
 
-def _mutates_observe_log(cmd: str) -> Optional[str]:
-    """Return a reason if a Bash command would destructively change the log."""
-    if OBSERVE_LOG not in cmd:
-        return None
-    log = re.escape(OBSERVE_LOG)
-    if re.search(r"(?<!>)>(?!>)\s*[^\s>]*" + log, cmd):
-        return "truncating redirect (>) to observe-log.jsonl"
-    if re.search(r"\brm\b[^|;&]*" + log, cmd):
-        return "rm targeting observe-log.jsonl"
-    if re.search(r"\bmv\b[^|;&]*" + log, cmd):
-        return "mv targeting observe-log.jsonl"
-    if re.search(r"\btruncate\b[^|;&]*" + log, cmd):
-        return "truncate targeting observe-log.jsonl"
-    if re.search(r"\bsed\b[^|;&]*-i[^|;&]*" + log, cmd):
-        return "sed -i targeting observe-log.jsonl"
-    if re.search(r"\btee\b[^|;&]*" + log, cmd) and not re.search(
-        r"\btee\b[^|;&]*(?:-a\b|--append)", cmd
-    ):
-        return "tee without --append targeting observe-log.jsonl"
-    return None
+class _LexError(Exception):
+    """The command could not be lexed (an unbalanced quote)."""
 
 
-def _is_recursive_rm(cmd: str) -> bool:
-    for m in re.finditer(r"\brm\b([^\n;&|`]*)", cmd):
-        for tok in m.group(1).split():
-            if tok.startswith("--recursive"):
-                return True
-            if tok.startswith("-") and not tok.startswith("--") and (
-                "r" in tok or "R" in tok
-            ):
-                return True
+def _strip_heredocs(cmd: str) -> Tuple[str, List[str]]:
+    """Split a command into (text with heredoc bodies removed, bodies a SHELL
+    will execute).
+
+    A heredoc body is a command's INPUT. Fed to `cat`, to `python`, or into a
+    commit message it is DATA, and scanning it is the false positive this
+    guard exists to avoid. Fed to a shell — `bash <<EOF`, `cat <<EOF | sh` —
+    it is a SCRIPT, and dropping it would let every blocked command through
+    inside one. So bodies are dropped EXCEPT where the introducing line names
+    a shell, and those are returned to be scanned as commands in their own
+    right. (Naming a shell on the line is the test; `cat <<EOF | grep bash`
+    therefore gets its body scanned too — a body scanned unnecessarily is the
+    cheaper error.)
+    """
+    lines = cmd.split("\n")
+    out = []  # type: List[str]
+    scripts = []  # type: List[str]
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        out.append(line)
+        delims = [m.group("d") for m in _HEREDOC_RE.finditer(line)]
+        executed = bool(delims) and _SHELL_ON_LINE_RE.search(line) is not None
+        i += 1
+        for delim in delims:
+            start = i
+            while i < len(lines) and lines[i].strip() != delim:
+                i += 1
+            if executed:
+                scripts.append("\n".join(lines[start:i]))
+            i += 1  # drop the terminator line as well
+    return "\n".join(out), scripts
+
+
+def _lex(cmd: str) -> List[Tuple[str, str]]:
+    """Lex shell text into ``("word", value)`` / ``("op", operator)`` tokens.
+
+    A quoted span contributes its VALUE to the surrounding word and can never be
+    read as an operator — that is the whole point: `echo "&"` backgrounds
+    nothing, and a keyword inside a quoted argument is data.
+    """
+    tokens = []  # type: List[Tuple[str, str]]
+    word = []  # type: List[str]
+    started = [False]  # a quoted empty string is still a word
+
+    def flush():
+        if started[0]:
+            tokens.append(("word", "".join(word)))
+            del word[:]
+            started[0] = False
+
+    i, n = 0, len(cmd)
+    while i < n:
+        c = cmd[i]
+        if c in " \t\r":
+            flush()
+            i += 1
+        elif c == "'":
+            j = cmd.find("'", i + 1)
+            if j < 0:
+                raise _LexError("unbalanced single quote")
+            word.append(cmd[i + 1:j])
+            started[0] = True
+            i = j + 1
+        elif c == '"':
+            j, buf = i + 1, []
+            while j < n and cmd[j] != '"':
+                if cmd[j] == "\\" and j + 1 < n and cmd[j + 1] in '\\"$`\n':
+                    if cmd[j + 1] != "\n":  # backslash-newline is a continuation
+                        buf.append(cmd[j + 1])
+                    j += 2
+                else:
+                    buf.append(cmd[j])
+                    j += 1
+            if j >= n:
+                raise _LexError("unbalanced double quote")
+            word.append("".join(buf))
+            started[0] = True
+            i = j + 1
+        elif c == "\\" and i + 1 < n:
+            if cmd[i + 1] != "\n":  # backslash-newline is a line continuation
+                word.append(cmd[i + 1])
+                started[0] = True
+            i += 2
+        elif c in _OPERATOR_CHARS:
+            flush()
+            for op in _OPERATORS:
+                if cmd.startswith(op, i):
+                    tokens.append(("op", op))
+                    i += len(op)
+                    break
+            else:  # pragma: no cover - every operator char starts an operator
+                i += 1
+        else:
+            word.append(c)
+            started[0] = True
+            i += 1
+    flush()
+    return tokens
+
+
+def _simple_commands(
+    tokens: List[Tuple[str, str]]
+) -> List[Tuple[List[str], List[Tuple[str, str]], str]]:
+    """Group tokens into ``(words, redirects, terminator)`` simple commands.
+
+    ``terminator`` is the operator that ENDED the command (``"&"`` for a
+    backgrounded one, ``"|"`` when it pipes into the next, ``""`` at the end).
+    """
+    cmds = []  # type: List[Tuple[List[str], List[Tuple[str, str]], str]]
+    words = []  # type: List[str]
+    redirects = []  # type: List[Tuple[str, str]]
+
+    def flush(terminator):
+        if words or redirects:
+            cmds.append((list(words), list(redirects), terminator))
+        del words[:]
+        del redirects[:]
+
+    i = 0
+    while i < len(tokens):
+        kind, val = tokens[i]
+        if kind == "word":
+            words.append(val)
+            i += 1
+        elif val in _REDIRECTS:
+            target = ""
+            if i + 1 < len(tokens) and tokens[i + 1][0] == "word":
+                target = tokens[i + 1][1]
+                i += 1
+            redirects.append((val, target))
+            i += 1
+        else:
+            flush(val)
+            i += 1
+    flush("")
+    return cmds
+
+
+def _lex_commands(text: str) -> List[Tuple[List[str], List[Tuple[str, str]], str]]:
+    """Lex one piece of shell text, tolerating broken quoting.
+
+    Text the lexer rejects is re-lexed with every quote character removed:
+    degraded (quoted content becomes bare words) but still command-position —
+    never a whole-string keyword scan."""
+    try:
+        return _simple_commands(_lex(text))
+    except _LexError:
+        return _simple_commands(_lex(re.sub(r"['\"]", " ", text)))
+
+
+def _parse(cmd: str) -> List[Tuple[List[str], List[Tuple[str, str]], str]]:
+    """Parse a Bash command into simple commands — including the commands
+    inside any heredoc body a shell is going to execute."""
+    cmds = []  # type: List[Tuple[List[str], List[Tuple[str, str]], str]]
+    pending = [cmd]
+    for _depth in range(_MAX_HEREDOC_DEPTH):
+        if not pending:
+            break
+        nxt = []  # type: List[str]
+        for text in pending:
+            stripped, scripts = _strip_heredocs(text)
+            cmds.extend(_lex_commands(stripped))
+            nxt.extend(scripts)
+        pending = nxt
+    return cmds
+
+
+def _basename(word: str) -> str:
+    return word.replace("\\", "/").rsplit("/", 1)[-1]
+
+
+def _invocations(words: List[str]) -> List[Tuple[str, List[str]]]:
+    """Return ``(name, args)`` for a simple command and any command it WRAPS."""
+    out = []  # type: List[Tuple[str, List[str]]]
+    i = 0
+    while i < len(words) and _ASSIGN_RE.match(words[i]):
+        i += 1  # leading VAR=value assignments are not the command
+    while i < len(words) and len(out) < 4:
+        out.append((words[i], words[i + 1:]))
+        if _basename(words[i]) not in _WRAPPERS:
+            break
+        wrapped = None
+        for j in range(i + 1, len(words)):
+            if _basename(words[j]) in _TRACKED or _basename(words[j]) in _WRAPPERS:
+                wrapped = j
+                break
+        if wrapped is None:
+            break
+        i = wrapped
+    return out
+
+
+def _all_invocations(cmds) -> List[Tuple[int, str, List[str]]]:
+    return [(idx, name, args)
+            for idx, (words, _r, _t) in enumerate(cmds)
+            for name, args in _invocations(words)]
+
+
+def _has_short_flag(args: List[str], letter: str, *long: str) -> bool:
+    for tok in args:
+        if tok in long:
+            return True
+        if tok.startswith("-") and not tok.startswith("--") and letter in tok:
+            return True
     return False
 
 
-def _destructive(cmd: str) -> Optional[str]:
-    if _is_recursive_rm(cmd):
-        return "recursive rm (rm -r / -R / -fr / --recursive, in any spelling)"
-    if re.search(r"\bfind\b[^|;&]*\s-delete\b", cmd):
-        return "find ... -delete"
-    if re.search(
-        r"\b(?:curl|wget)\b[^\n]*?(?:\|\s*(?:ba)?sh\b|(?:&&|;)\s*(?:ba)?sh\b)", cmd
-    ):
-        return "curl/wget piped or chained into a shell"
-    if re.search(r"\bsudo\b", cmd):
-        return "sudo / privilege escalation"
-    if re.search(r"\bchmod\b\s+777\b", cmd):
-        return "chmod 777"
+def _mutates_observe_log(cmds) -> Optional[str]:
+    """Return a reason if a Bash command would destructively change the log."""
+    for words, redirects, _term in cmds:
+        for op, target in redirects:
+            if op in _TRUNCATING and _basename(target) == OBSERVE_LOG:
+                return "truncating redirect (>) to observe-log.jsonl"
+        for name, args in _invocations(words):
+            base = _basename(name)
+            if not any(_basename(a) == OBSERVE_LOG for a in args):
+                continue
+            if base in ("rm", "mv", "truncate"):
+                return "%s targeting observe-log.jsonl" % base
+            if base == "sed" and _has_short_flag(args, "i", "--in-place"):
+                return "sed -i targeting observe-log.jsonl"
+            if base == "tee" and not _has_short_flag(args, "a", "--append"):
+                return "tee without --append targeting observe-log.jsonl"
     return None
 
 
-def _detaches(cmd: str) -> Optional[str]:
+def _is_recursive_rm(name: str, args: List[str]) -> bool:
+    if _basename(name) != "rm":
+        return False
+    for tok in args:
+        if tok.startswith("--recursive"):
+            return True
+        if tok.startswith("-") and not tok.startswith("--") and (
+            "r" in tok or "R" in tok
+        ):
+            return True
+    return False
+
+
+def _destructive(cmds) -> Optional[str]:
+    invocations = _all_invocations(cmds)
+    for _idx, name, args in invocations:
+        if _is_recursive_rm(name, args):
+            return "recursive rm (rm -r / -R / -fr / --recursive, in any spelling)"
+    for _idx, name, args in invocations:
+        if _basename(name) == "find" and "-delete" in args:
+            return "find ... -delete"
+    for idx, name, _args in invocations:
+        if _basename(name) not in ("curl", "wget"):
+            continue
+        if cmds[idx][2] not in _PIPE_INTO or idx + 1 >= len(cmds):
+            continue
+        for nxt_name, _ in _invocations(cmds[idx + 1][0]):
+            if _basename(nxt_name) in _SHELLS:
+                return "curl/wget piped or chained into a shell"
+    for _idx, name, _args in invocations:
+        if _basename(name) == "sudo":
+            return "sudo / privilege escalation"
+    for _idx, name, args in invocations:
+        if _basename(name) == "chmod" and any(a in ("777", "0777") for a in args):
+            return "chmod 777"
+    return None
+
+
+def _detaches(cmds) -> Optional[str]:
     """Return a reason if a Bash command would DETACH work from the session.
 
-    Run-to-completion (Card 3.1): the shell operators below orphan a process so
-    it outlives the tool call — the exact failure the prose rule missed. A bare
-    ``&`` background operator is matched but ``&&``, ``&>``/``>&`` redirects, and
-    ``2>&1`` are not (the lookarounds exclude a ``&`` adjacent to another ``&``
-    or a ``>``). The Bash tool's own ``run_in_background`` parameter is the
-    session-tracked path and is intentionally NOT matched here."""
-    if re.search(r"\bnohup\b", cmd):
-        return "nohup (detaches the process from the session)"
-    if re.search(r"\bdisown\b", cmd):
-        return "disown (detaches the process from the session)"
-    if re.search(r"\bsetsid\b", cmd):
-        return "setsid (detaches the process from the session)"
-    if re.search(r"(?<![&>])&(?![&>])", cmd):
-        return "trailing '&' backgrounding (orphans work the session must finish)"
+    Run-to-completion (Card 3.1): the constructs below orphan a process so it
+    outlives the tool call — the exact failure the prose rule missed. Only a
+    command-position ``nohup``/``disown``/``setsid`` and a real background ``&``
+    operator count; ``&&``, ``&>``/``>&`` redirects and ``2>&1`` are separate
+    operators to the lexer, and a keyword inside an argument is data. The Bash
+    tool's own ``run_in_background`` parameter is the session-tracked path and is
+    intentionally NOT matched here."""
+    for _idx, name, _args in _all_invocations(cmds):
+        base = _basename(name)
+        if base in ("nohup", "disown", "setsid"):
+            return "%s (detaches the process from the session)" % base
+    for _words, _redirects, term in cmds:
+        if term == "&":
+            return "trailing '&' backgrounding (orphans work the session must finish)"
     return None
 
 
@@ -128,15 +410,14 @@ def evaluate(tool_name: str, tool_input: dict) -> Optional[str]:
         return None
 
     if tool_name == "Bash":
-        cmd = tool_input.get("command", "") or ""
-        scan = _code_view(cmd)
-        reason = _mutates_observe_log(scan)
+        cmds = _parse(tool_input.get("command", "") or "")
+        reason = _mutates_observe_log(cmds)
         if reason:
             return f"Blocked: {reason}. observe-log.jsonl is append-only."
-        reason = _destructive(scan)
+        reason = _destructive(cmds)
         if reason:
             return f"Blocked destructive command: {reason}."
-        reason = _detaches(scan)
+        reason = _detaches(cmds)
         if reason:
             return (
                 f"Blocked detached/backgrounded command: {reason}. Run work to "
