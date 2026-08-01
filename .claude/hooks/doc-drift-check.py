@@ -32,6 +32,21 @@ def _read(p: Path):
         return None
 
 
+# Markdown that DESCRIBES a link is not a link. MEMORY.md documents its own
+# format with a literal example — "Each entry is one line: `- [Title](file.md)
+# — one-line hook`" — and reading that as an index entry made file.md the
+# hook's only finding on its first run: 100% noise, the exact regression this
+# rung's prediction named. Same defect class as a blocklist matched against
+# text that CONTAINS commands: match the real instances, not the prose about
+# them. Fenced blocks and inline code spans are blanked before scanning.
+_CODE_FENCE_RE = re.compile(r"^```.*?^```", re.MULTILINE | re.DOTALL)
+_CODE_SPAN_RE = re.compile(r"`[^`\n]*`")
+
+
+def _prose_only(text: str) -> str:
+    return _CODE_SPAN_RE.sub(" ", _CODE_FENCE_RE.sub("", text))
+
+
 def _memory_problems(root: Path):
     """Topic files not linked from the index, and index links that 404."""
     problems = []
@@ -41,7 +56,7 @@ def _memory_problems(root: Path):
         return problems
     linked = {
         os.path.basename(m.group(1))
-        for m in re.finditer(r"\]\(([^)]+\.md)\)", index_text)
+        for m in re.finditer(r"\]\(([^)]+\.md)\)", _prose_only(index_text))
     }
     try:
         present = {p.name for p in mem.glob("*.md") if p.name != "MEMORY.md"}
