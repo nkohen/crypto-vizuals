@@ -7,7 +7,7 @@ pre-computed from the prework handouts (Weeks 1, 2a, 2b, 3–7) and their readin
 show it next to the exercises. Because students see it, it describes what each concept is and how
 it bears on the others. It never says how to solve an exercise.*
 
-**Status:** DRAFT — pre-computed for the Cryptography Camp prework goal on 2026-11-04 (not built for one learner).
+**Status:** gated once (claim-auditor → red-team), 2026-11-04 — pre-computed for the Cryptography Camp prework goal (not built for one learner). Still a hypothesis about the dependency structure; a lesson's own prep re-verifies its target.
 
 **Goal this map serves:** working through the Cryptography Camp prework. That runs from modular
 arithmetic and Diffie–Hellman/ElGamal, through proof by reduction, attack games and finite
@@ -19,7 +19,7 @@ threshold Schnorr (Pedersen DKG, FROST).
 limit), and enough programming to write small functions and loops in some language. No prior
 cryptography, abstract algebra or probability is assumed. Comfort with sets and functions is
 covered by an optional reading (`sets-functions`). Edges are **formal** (you cannot state the next
-thing without this one) or **informal** (motivation, intuition, analogy). Where a result is
+thing, or follow this route's proof of it, without this one) or **informal** (motivation, intuition, analogy). Where a result is
 reached by genuinely different paths, each path is listed as its own route.
 
 ---
@@ -256,7 +256,7 @@ The central theorem of the prework: if discrete log is hard in $\G$, then Schnor
   - formal ← `schnorr-signature-scheme` — the scheme being proved secure
   - informal ← `nonce-reuse` — the handout flags the two-signature claim as an ingredient of this kind of proof
 - **Route:** AGM + ROM, without rewinding (Week 4 exercise)
-  - formal ← `algebraic-group-model` — the forger is assumed algebraic
+  - formal ← `algebraic-group-model` — the forger is assumed algebraic, so this route proves the theorem only against algebraic forgers
   - formal ← `random-oracle-model` — the hash is still a random oracle
   - formal ← `euf-cma` — the game the forger plays
   - formal ← `oracle-simulation` — the reduction has to answer the forger's oracle queries itself
@@ -270,6 +270,7 @@ The central theorem of the prework: if discrete log is hard in $\G$, then Schnor
   - formal ← `oracle-simulation` — the reduction has to answer the forger's oracle queries itself
   - formal ← `dh-assumptions` — the DL game is the assumption reduced to
   - formal ← `schnorr-signature-scheme` — the scheme being proved secure
+  - informal ← `identification-schemes` — the exercise lets you refer back to the Katz–Lindell proofs, which include the Schnorr identification proof
   - informal ← `fiat-shamir` — the Week 6 exercise asks for a direct proof that does not invoke the transform; the Katz–Lindell proof is a reference, not a step
   - informal ← `nonce-reuse` — the handout flags the two-signature claim as an ingredient of this kind of proof
 
@@ -337,7 +338,7 @@ An assumption is falsifiable if a PPT challenger can decide whether a given algo
   - informal ← `algebraic-group-model` — the same kind of representation, but here it is a property of the reduction and orthogonal to the AGM
 
 ### `schnorr-id-concurrent` · Schnorr identification under concurrent attack
-IMP-CA security: an impersonator may first run many sessions with honest provers concurrently, acting as a possibly dishonest verifier, and then has to convince an honest verifier. Bellare and Palacio prove Schnorr identification IMP-CA secure under OMDL. Schnorr signatures do not need OMDL for this, because Fiat–Shamir removes the interactive challenge that a concurrent attacker could exploit.
+IMP-CA security: an impersonator may first run many sessions with honest provers concurrently, acting as a possibly dishonest verifier, and then has to convince an honest verifier. Bellare and Palacio prove Schnorr identification IMP-CA secure under OMDL. Schnorr signatures do not need OMDL to be secure against concurrent attacks, because Fiat–Shamir removes the interactive challenge that a concurrent attacker could exploit.
 
 - **Prework:** `5/reading-4`, `5/exercise-6`
 - **Route:** From OMDL (Bellare–Palacio)
@@ -499,4 +500,9 @@ the ROM. Fixed in this file:
 
 ## Adversarial ledger
 
-*Pending — red-team.*
+- 2026-11-04 · red-team · attack: direction of DDH⇒CDH⇒DL, OMDL⇒DL, OMDL⇒AOMDL against handout text · result: SURVIVED — Week2a.tex:115-117,196-197 and Week5.tex:136,149 state exactly the map's directions · cost: 3 claims, targeted grep of Week2a/Week5, <1 min
+- 2026-11-04 · red-team · attack: schnorr-euf-cma route edges (BN fiat-shamir informal, AGM needs ROM, KL rewinding formal) · result: SURVIVED — Week6.tex:117, Week4.tex:137, KL Thm 13.11 proof step 3 confirm all three; consistency gap (BN route lacked informal ← identification-schemes) FIXED · cost: 3 routes, reads of Week4/Week6 + KL extracts, ~2 min
+- 2026-11-04 · red-team · attack: "signatures do not need OMDL" strength vs source · result: SURVIVED — Week5.tex:145 near-verbatim (instructor assertion, not a cited theorem); "for this" (IMP-CA) mis-scoped for signatures, reworded to "secure against concurrent attacks" · cost: 1 targeted read, <1 min
+- 2026-11-04 · red-team · attack: exact factor between two-world and signed hidden-bit advantage over all distinguishers of a toy PRG · result: SURVIVED (this map's tutor note, 32/32 match 2·|signed|, Boneh–Shoup (3.1)) / REFUTED (the studio's notation bridge said "exactly half" under the signed convention: D=(0,0,0,1), b=0 real gives two-world 1/4, signed −1/8; FIXED to "in absolute value") · cost: 32 cases, python3 fractions, <1 s
+- 2026-11-04 · red-team · attack: AGM route reaching the unrestricted EUF-CMA node; frost and musig2 forking edges · result: NARROWED — AGM route proves security only against algebraic forgers (Week4.tex:131); edge now says so. frost ← general-forking-lemma (FROST:767,1122) and the musig2 route split (MuSig2:504-528) SURVIVED · cost: 3 edges, grep of Week4 + FROST/MuSig2 extracts, ~2 min
+- 2026-11-04 · red-team · attack surface: the legend defined formal as "cannot state", while section G uses formal for proof prerequisites of a route (rewinding, forking lemma, oracle simulation) · result: legend widened to "cannot state it, or follow this route's proof of it" · cost: read-through

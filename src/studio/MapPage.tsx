@@ -57,7 +57,7 @@ function Legend() {
         <svg width="26" height="8" aria-hidden="true">
           <line x1="0" y1="4" x2="26" y2="4" stroke="#38bdf8" strokeWidth="2" />
         </svg>
-        formal need (can't state it without)
+        formal need (can't state it, or follow this route's proof, without)
       </span>
       <span className="flex items-center gap-1.5">
         <svg width="26" height="8" aria-hidden="true">

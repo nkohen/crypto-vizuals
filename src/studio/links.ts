@@ -29,7 +29,7 @@ export const PROOF_LINKS: ProofLink[] = [
     gate: ['2b/exercise-7', '2b/exercise-8'],
     blurb: 'Check your work: a step-by-step walk-through of the stream-cipher reduction, with the PRG game and the distinguisher as pseudocode.',
     bridge:
-      'The walk-through uses Katz–Lindell notation. Its EAV game $\\mathsf{PrivK}^{\\mathsf{eav}}$ is your $\\game{\\algo{DistinguishCipher}}{}$: $\\adv$ picks $m_0, m_1$, the challenger encrypts $m_b$ under a fresh key, and $\\adv$ wins by guessing $b$. Its $n$ is your $\\lambda$, its $b\'$ your $\\hat b$, and it uses your signed advantage $\\Pr[\\text{win}] - \\tfrac{1}{2}$. Its PRG game is one possible answer to Exercise 7, written as two worlds (real vs random) with advantage $\\lvert \\Pr[\\mathsf{Real}=1] - \\Pr[\\mathsf{Rand}=1] \\rvert$; a single game with a hidden bit works too: its advantage is exactly half the two-world one, so one is negligible exactly when the other is.',
+      'The walk-through uses Katz–Lindell notation. Its EAV game $\\mathsf{PrivK}^{\\mathsf{eav}}$ is your $\\game{\\algo{DistinguishCipher}}{}$: $\\adv$ picks $m_0, m_1$, the challenger encrypts $m_b$ under a fresh key, and $\\adv$ wins by guessing $b$. Its $n$ is your $\\lambda$, its $b\'$ your $\\hat b$, and it uses your signed advantage $\\Pr[\\text{win}] - \\tfrac{1}{2}$. Its PRG game is one possible answer to Exercise 7, written as two worlds (real vs random) with advantage $\\lvert \\Pr[\\mathsf{Real}=1] - \\Pr[\\mathsf{Rand}=1] \\rvert$; a single game with a hidden bit works too: its advantage is, in absolute value, exactly half the two-world one, so one is negligible exactly when the other is.',
   },
   {
     proof: 'prepend-zero',

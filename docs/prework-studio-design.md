@@ -37,6 +37,11 @@ src/proofs.ts ─────────────────────►
 Nothing in learning-edge defines "pre-compute", so I read the request as: build the territory map for the prework goal
 **ahead of time**, gate it the way `/setup` step 3 gates a fresh map (researcher → claim-auditor → red-team), and ship
 it, so a student neither waits for `/setup` to build it nor gets a per-session, un-gated one.
+**Gate result (2026-11-04):** the researcher's draft (41 nodes, 6 multi-route) went through claim-auditor
+(SOUND WITH FIXES: 4 over-claims, 6 edge or route fixes) and then red-team (directions of implication and the
+three Schnorr routes SURVIVED, the AGM route NARROWED to algebraic forgers, and a factor-of-2 sentence in this
+studio's notation bridge REFUTED and fixed). Both verdicts are recorded in the map's `## Audit` and
+`## Adversarial ledger`.
 **Cost:** one map for every student, not organized around each one's own goal. `/setup` builds per-learner maps for
 a reason, and a student whose goal differs from "the prework" should still let the tutor build their own.
 
@@ -122,7 +127,7 @@ shows in full (Week 3's prepend-a-0-bit reduction) is never gated.
 The stream-cipher walk-through keeps its Katz–Lindell notation, and the studio shows a **notation bridge** that states
 the correspondence so it can be checked: `PrivK^eav` is `Game_DistinguishCipher`, `n` is `λ`, `b′` is `b̂`, and the
 advantage is the same signed `Pr[win] − 1/2`. Its two-world PRG game is presented as one possible answer to Exercise 7,
-next to the hidden-bit form (whose advantage is exactly half). The new walk-through is written in the handout's own
+next to the hidden-bit form (whose advantage is exactly half, in absolute value: the signed `Pr[win] − 1/2` can be negative). The new walk-through is written in the handout's own
 notation (`A′`, `A`, `λ`).
 **Cost:** two notations remain for the student to translate between, and the bridge text must be maintained if
 either side changes.
