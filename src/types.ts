@@ -105,4 +105,9 @@ export interface Proof {
   steps: ProofStep[];
   /** Formal pseudocode figures (games, constructions, the reduction). */
   figures?: PseudocodeFigure[];
+  /**
+   * What the proof calls its two players, for the legend. Defaults to the
+   * textbook B (reduction) and A (adversary); the prework writes A′ and A.
+   */
+  cast?: { reduction: string; adversary: string };
 }

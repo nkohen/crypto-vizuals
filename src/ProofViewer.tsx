@@ -1,12 +1,20 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Layers, Keyboard, ChevronRight } from 'lucide-react';
-import { streamCipherProof } from './proof';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
+import { Layers, Keyboard, ChevronRight, ArrowLeft } from 'lucide-react';
+import type { Proof } from './types';
 import ReductionDiagram from './ReductionDiagram';
 import StepPanel from './StepPanel';
 import { renderRichText } from './richText';
 
-export default function App() {
-  const proof = streamCipherProof;
+interface Props {
+  proof: Proof;
+  /** Where "back" goes when the viewer is opened from the prework studio. */
+  back?: { href: string; label: string };
+  /** Shown under the theorem, e.g. how the walk-through's notation maps onto a handout's. */
+  notice?: ReactNode;
+}
+
+/** The step-through reduction viewer for one proof. */
+export default function ProofViewer({ proof, back, notice }: Props) {
   const [index, setIndex] = useState(0);
   const step = proof.steps[index];
   const total = proof.steps.length;
@@ -39,14 +47,20 @@ export default function App() {
       <header className="border-b border-ink-700/50 bg-ink-900/80 backdrop-blur-sm sticky top-0 z-20">
         <div className="mx-auto max-w-7xl px-6 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
+            {back && (
+              <a
+                href={back.href}
+                className="flex items-center gap-1.5 rounded-lg border border-ink-600/70 bg-ink-800/60 px-2.5 py-1.5 text-xs font-medium text-ink-200 hover:bg-ink-700/60 hover:text-ink-50"
+              >
+                <ArrowLeft size={14} /> {back.label}
+              </a>
+            )}
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-accent-500/30 to-accent-700/20 border border-accent-500/30">
               <Layers size={20} className="text-accent-300" />
             </span>
             <div className="min-w-0">
               <h1 className="text-base font-bold text-ink-50 leading-tight tracking-tight">ReductionLab</h1>
-              <p className="text-xs text-ink-400 leading-tight truncate">
-                Interactive proofs by reduction
-              </p>
+              <p className="text-xs text-ink-400 leading-tight truncate">{proof.title}</p>
             </div>
           </div>
 
@@ -91,6 +105,7 @@ export default function App() {
             </span>
             <p className="text-sm text-ink-300 leading-relaxed">{renderRichText(proof.theorem)}</p>
           </div>
+          {notice}
         </div>
       </div>
 
@@ -159,8 +174,8 @@ export default function App() {
 
               {/* Legend */}
               <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1 text-[11px] text-ink-400">
-                <LegendDot color="#38bdf8" label="Reduction B" />
-                <LegendDot color="#f43f5e" label="Adversary A" />
+                <LegendDot color="#38bdf8" label={`Reduction ${proof.cast?.reduction ?? 'B'}`} />
+                <LegendDot color="#f43f5e" label={`Adversary ${proof.cast?.adversary ?? 'A'}`} />
                 <LegendDot color="#fbbf24" label="Challenger" />
                 <LegendDot color="#34d399" label="Value" />
                 <LegendDot color="#5a6c8c" label="Internal" />

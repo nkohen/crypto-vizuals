@@ -16,12 +16,24 @@ const UNICODE_TEXT: Record<string, string> = {
   '≤': '$\\leq$',
   '≥': '$\\geq$',
   'Π': '$\\Pi$',
+  '′': "$'$",
+  'σ': '$\\sigma$',
+  'λ': '$\\lambda$',
+  'δ': '$\\delta$',
+  '‖': '$\\|$',
+  '“': '``',
+  '”': "''",
+  '’': "'",
 };
 
-/** Escape a run of plain (non-math) text for LaTeX text mode. */
-export function escapeText(s: string): string {
+/**
+ * Escape a run of plain (non-math) text for LaTeX text mode. `before` is the
+ * character that precedes the run in the full string (a run that follows math,
+ * as in "$\\adv$'s", must not read its apostrophe as an opening quote).
+ */
+export function escapeText(s: string, before = ' '): string {
   let out = '';
-  let prev = ' ';
+  let prev = before;
   for (const ch of s) {
     const after = prev;
     prev = ch;
@@ -46,16 +58,19 @@ export function escapeText(s: string): string {
  * LaTeX equivalent.
  */
 export function richTextToLatex(text: string): string {
+  let prevChar = ' ';
   return text
     .split(RICH_TEXT_TOKEN_RE)
     .map((part) => {
       if (!part) return '';
+      const before = prevChar;
+      prevChar = part[part.length - 1];
       if (part.startsWith('$$') && part.endsWith('$$')) return `$\\displaystyle ${part.slice(2, -2)}$`;
       if (part.length > 2 && part.startsWith('$') && part.endsWith('$')) return part;
       if (part.startsWith('<code>')) return `\\texttt{${escapeText(part.slice(6, -7))}}`;
       if (part.startsWith('<strong>')) return `\\textbf{${richTextToLatex(part.slice(8, -9))}}`;
       if (part.startsWith('<em>')) return `\\emph{${richTextToLatex(part.slice(4, -5))}}`;
-      return escapeText(part);
+      return escapeText(part, before);
     })
     .join('');
 }
