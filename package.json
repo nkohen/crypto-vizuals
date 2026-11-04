@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.app.json",
-    "export:tikz": "esbuild scripts/export-tikz.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/export-tikz.mjs && node node_modules/.cache/export-tikz.mjs"
+    "export:tex": "esbuild scripts/export-tex.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/export-tex.mjs && node node_modules/.cache/export-tex.mjs",
+    "check:tex": "esbuild scripts/check-tex.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/check-tex.mjs && node node_modules/.cache/check-tex.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

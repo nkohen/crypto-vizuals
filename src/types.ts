@@ -61,6 +61,39 @@ export interface ProofStep {
   arrows: Arrow[];
   /** Optional highlight note for the diagram. */
   diagramNote?: string;
+  /** Ids of the proof's pseudocode figures (`Proof.figures`) this step refers to. */
+  figures?: string[];
+}
+
+/**
+ * One line of pseudocode. `code` is math-mode TeX (no `$` delimiters) written in
+ * the vocabulary of ./pcMacros.ts — the same string renders through KaTeX in the
+ * viewer and inside a cryptocode `\procedure` in the LaTeX export.
+ */
+export interface PseudocodeLine {
+  code: string;
+  /** Nesting depth under a `for`/`if` (cryptocode `\t`). */
+  indent?: number;
+  /** Trailing comment, as rich text (cryptocode `\pccomment`). */
+  comment?: string;
+  /** Mark a game hop: this line differs from the game it is compared against. */
+  highlight?: boolean;
+}
+
+/** A named block of pseudocode: a game, an oracle, an algorithm, or a reduction. */
+export interface Procedure {
+  /** Rich text, e.g. `Game $\\mathsf{PrivK}^{\\mathsf{eav}}_{\\adv,\\Pi}(n)$`. */
+  title: string;
+  lines: PseudocodeLine[];
+}
+
+/** A boxed figure of procedures, laid out side by side or stacked. */
+export interface PseudocodeFigure {
+  id: string;
+  /** Rich text caption. */
+  caption: string;
+  layout: 'hstack' | 'vstack';
+  procedures: Procedure[];
 }
 
 export interface Proof {
@@ -70,4 +103,6 @@ export interface Proof {
   /** The high-level statement being proved. */
   theorem: string;
   steps: ProofStep[];
+  /** Formal pseudocode figures (games, constructions, the reduction). */
+  figures?: PseudocodeFigure[];
 }
