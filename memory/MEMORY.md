@@ -10,3 +10,4 @@ Each entry is one line: `- [Title](file.md) — one-line hook`
 ---
 
 - [Reduction proof anatomy](reduction-proof-anatomy.md) — the parts of a reduction the visualization has to represent faithfully (adversary, reduction/simulator, challenger, advantage), and the direction of the implication
+- [Prework Studio](prework-studio.md) — the prework+ReductionLab+learning-edge GUI prototype: the agent-chosen reading of "territory pre-computes", map-format and spoiler rules, why the profile export stops at the interview
