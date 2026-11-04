@@ -95,16 +95,41 @@ export function arrowGeometry(ar: Arrow, idMap: Map<string, BaseEntity>): ArrowG
   const dx = tp.x - fp.x;
   const dy = tp.y - fp.y;
   const len = Math.hypot(dx, dy) || 1;
-  const control = { x: mx + (-dy / len) * curve, y: my + (dx / len) * curve };
+  let control = { x: mx + (-dy / len) * curve, y: my + (dx / len) * curve };
 
   // Anchor each endpoint toward the control point (not the far center), so
   // parallel arrows between the same two boxes leave/arrive at distinct
   // points on the perimeter and line up with the curve's tangent.
-  const start = fromE ? anchorPoint(fromE, control.x, control.y) : fp;
-  const end = toE ? anchorPoint(toE, control.x, control.y) : tp;
+  let start = fromE ? anchorPoint(fromE, control.x, control.y) : fp;
+  let end = toE ? anchorPoint(toE, control.x, control.y) : tp;
+
+  // A large container box (e.g. the reduction B wrapping everything) can swallow
+  // the control point. The curve then overshoots past the endpoint and doubles
+  // back, so the arrowhead points the wrong way — the arrow appears to flow in
+  // the opposite direction. Re-derive the control point from the anchored
+  // endpoints (anchored along the center-to-center line, i.e. the visible gap
+  // between the two shapes) instead, and re-anchor toward it.
+  if ((fromE && contains(fromE, control)) || (toE && contains(toE, control))) {
+    const s0 = fromE ? anchorPoint(fromE, tp.x, tp.y) : fp;
+    const e0 = toE ? anchorPoint(toE, fp.x, fp.y) : tp;
+    const ex = e0.x - s0.x;
+    const ey = e0.y - s0.y;
+    const elen = Math.hypot(ex, ey) || 1;
+    control = {
+      x: (s0.x + e0.x) / 2 + (-ey / elen) * curve,
+      y: (s0.y + e0.y) / 2 + (ex / elen) * curve,
+    };
+    start = fromE ? anchorPoint(fromE, control.x, control.y) : fp;
+    end = toE ? anchorPoint(toE, control.x, control.y) : tp;
+  }
 
   // Label sits at the control point, nudged up.
   return { start, control, end, label: { x: control.x, y: control.y - 8 } };
+}
+
+function contains(e: BaseEntity, p: Point): boolean {
+  const b = entityBounds(e);
+  return p.x > b.x && p.x < b.x + b.w && p.y > b.y && p.y < b.y + b.h;
 }
 
 /**
