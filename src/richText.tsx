@@ -1,5 +1,6 @@
 import katex from 'katex';
 import type { ReactNode } from 'react';
+import { RICH_TEXT_TOKEN_RE } from './richTextTokens';
 
 function katexHtml(tex: string, displayMode: boolean): string {
   return katex.renderToString(tex, {
@@ -11,15 +12,9 @@ function katexHtml(tex: string, displayMode: boolean): string {
   });
 }
 
-// Splits on: $$display$$ / $inline$ math, plus <code>/<strong>/<em> markup.
-// Math bodies allow escaped chars (e.g. \$ for the "sampled uniformly" arrow),
-// so an escaped dollar never terminates the delimiter early.
-const TOKEN_RE =
-  /(\$\$(?:\\.|[^$\\])+\$\$|\$(?:\\.|[^$\\])+\$|<code>.*?<\/code>|<strong>.*?<\/strong>|<em>.*?<\/em>)/g;
-
 /** Render a narration/heading string with inline LaTeX and light markup into React nodes. */
 export function renderRichText(text: string): ReactNode[] {
-  return text.split(TOKEN_RE).map((part, i) => {
+  return text.split(RICH_TEXT_TOKEN_RE).map((part, i) => {
     if (!part) return null;
 
     if (part.startsWith('$$') && part.endsWith('$$')) {

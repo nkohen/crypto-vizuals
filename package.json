@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit -p tsconfig.app.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json",
+    "export:tikz": "esbuild scripts/export-tikz.ts --bundle --platform=node --format=esm --log-level=warning --outfile=node_modules/.cache/export-tikz.mjs && node node_modules/.cache/export-tikz.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.57.4",

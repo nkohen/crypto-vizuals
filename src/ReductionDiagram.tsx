@@ -2,6 +2,17 @@ import { useMemo } from 'react';
 import type { ReactNode } from 'react';
 import type { Arrow, BaseEntity, EntityRole } from './types';
 import { renderRichText } from './richText';
+import {
+  BOX_HEADER_H,
+  BOX_RADIUS,
+  CANVAS_H,
+  CANVAS_W,
+  arrowGeometry,
+  boxCaptionCenter,
+  entityBounds,
+  isCircle,
+  paintOrder,
+} from './geometry';
 
 interface Props {
   entities: BaseEntity[];
@@ -60,8 +71,8 @@ function SvgLabel({
   );
 }
 
-const W = 880;
-const H = 500;
+const W = CANVAS_W;
+const H = CANVAS_H;
 
 const roleStyle: Record<EntityRole, { stroke: string; fill: string; glow: string; text: string }> = {
   adversary: { stroke: '#f43f5e', fill: 'rgba(244,63,94,0.10)', glow: '#fb7185', text: '#fda4af' },
@@ -74,65 +85,11 @@ const roleStyle: Record<EntityRole, { stroke: string; fill: string; glow: string
   internal: { stroke: '#5a6c8c', fill: 'rgba(90,108,140,0.16)', glow: '#8492ad', text: '#dde3ee' },
 };
 
-function entityBounds(e: BaseEntity): { x: number; y: number; w: number; h: number } {
-  const w = e.w ?? (e.kind === 'call' ? 56 : 96);
-  const h = e.h ?? (e.kind === 'call' ? 56 : 64);
-  return { x: e.x, y: e.y, w, h };
-}
-
-/** Get an anchor point on an entity's perimeter, towards a target. */
-function anchorPoint(e: BaseEntity, tx: number, ty: number): { x: number; y: number } {
-  const b = entityBounds(e);
-  const cx = b.x + b.w / 2;
-  const cy = b.y + b.h / 2;
-  const dx = tx - cx;
-  const dy = ty - cy;
-  if (dx === 0 && dy === 0) return { x: cx, y: cy };
-
-  // For call/value nodes (circles), use radial anchor.
-  if (e.kind === 'call' || e.kind === 'value' || e.kind === 'oracle') {
-    const r = b.w / 2;
-    const len = Math.hypot(dx, dy) || 1;
-    return { x: cx + (dx / len) * r, y: cy + (dy / len) * r };
-  }
-
-  // For boxes, intersect with the rectangle perimeter.
-  const aw = b.w / 2;
-  const ah = b.h / 2;
-  const sx = aw / Math.max(Math.abs(dx), 0.001);
-  const sy = ah / Math.max(Math.abs(dy), 0.001);
-  const s = Math.min(sx, sy);
-  return { x: cx + dx * s, y: cy + dy * s };
-}
-
-function centerOf(e: BaseEntity): { x: number; y: number } {
-  const b = entityBounds(e);
-  return { x: b.x + b.w / 2, y: b.y + b.h / 2 };
-}
-
-function getPoint(ref: string | [number, number], idMap: Map<string, BaseEntity>): { x: number; y: number } {
-  if (Array.isArray(ref)) return { x: ref[0], y: ref[1] };
-  const e = idMap.get(ref);
-  if (!e) return { x: 0, y: 0 };
-  return centerOf(e);
-}
-
 export default function ReductionDiagram({ entities, arrows, note }: Props) {
   const idMap = useMemo(() => new Map(entities.map((e) => [e.id, e])), [entities]);
 
-  // Compute parent z-order: parents drawn first.
-  const sorted = useMemo(() => {
-    const arr = [...entities];
-    arr.sort((a, b) => {
-      if (a.id === b.parent) return -1;
-      if (b.id === a.parent) return 1;
-      // Larger boxes (parents) first by area.
-      const aa = (a.w ?? 0) * (a.h ?? 0);
-      const ab = (b.w ?? 0) * (b.h ?? 0);
-      return ab - aa;
-    });
-    return arr;
-  }, [entities]);
+  // Parents drawn first.
+  const sorted = useMemo(() => paintOrder(entities), [entities]);
 
   return (
     <div className="relative w-full">
@@ -187,40 +144,15 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
         {/* Arrows first (behind boxes) */}
         <g>
           {arrows.map((ar) => {
-            const fromE = Array.isArray(ar.from) ? null : idMap.get(ar.from);
-            const toE = Array.isArray(ar.to) ? null : idMap.get(ar.to);
-            const fp = getPoint(ar.from, idMap);
-            const tp = getPoint(ar.to, idMap);
-
-            // Control point is derived from the center-to-center line so that each
-            // arrow's curve is independent of where it ends up anchoring.
-            const mx = (fp.x + tp.x) / 2;
-            const my = (fp.y + tp.y) / 2;
-            const curve = ar.curve ?? 0;
-            const dx = tp.x - fp.x;
-            const dy = tp.y - fp.y;
-            const len = Math.hypot(dx, dy) || 1;
-            const nx = -dy / len;
-            const ny = dx / len;
-            const cx = mx + nx * curve;
-            const cy = my + ny * curve;
-
-            // Anchor each endpoint toward the control point (not the far center), so
-            // parallel arrows between the same two boxes leave/arrive at distinct
-            // points on the perimeter and line up with the curve's tangent.
-            const sx = fromE ? anchorPoint(fromE, cx, cy).x : fp.x;
-            const sy = fromE ? anchorPoint(fromE, cx, cy).y : fp.y;
-            const ex = toE ? anchorPoint(toE, cx, cy).x : tp.x;
-            const ey = toE ? anchorPoint(toE, cx, cy).y : tp.y;
-            const path = `M ${sx} ${sy} Q ${cx} ${cy} ${ex} ${ey}`;
+            const { start, control, end, label } = arrowGeometry(ar, idMap);
+            const path = `M ${start.x} ${start.y} Q ${control.x} ${control.y} ${end.x} ${end.y}`;
 
             const active = ar.active !== false;
             const color = ar.flow ? '#74d4ff' : '#5a6c8c';
             const marker = ar.flow ? 'url(#mh-flow)' : 'url(#mh-dim)';
 
-            // label position: at curve midpoint, offset along normal
-            const lx = cx;
-            const ly = cy - 8;
+            const lx = label.x;
+            const ly = label.y;
 
             return (
               <g key={ar.id}>
@@ -281,12 +213,12 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
             const b = entityBounds(e);
             const s = roleStyle[e.role];
             const isActive = e.active !== false;
-            const isCircle = e.kind === 'call' || e.kind === 'value' || e.kind === 'oracle';
+            const circle = isCircle(e);
             const opacity = isActive ? 1 : 0.42;
 
             return (
               <g key={e.id} style={{ transition: 'opacity 0.45s', opacity }}>
-                {isCircle ? (
+                {circle ? (
                   <>
                     <circle
                       cx={b.x + b.w / 2}
@@ -316,7 +248,7 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
                       y={b.y}
                       width={b.w}
                       height={b.h}
-                      rx={10}
+                      rx={BOX_RADIUS}
                       fill={s.fill}
                       stroke={s.stroke}
                       strokeWidth={isActive ? 2.2 : 1.4}
@@ -325,7 +257,7 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
                       style={{ transition: 'stroke 0.4s' }}
                     />
                     {/* header strip for boxes */}
-                    <rect x={b.x} y={b.y} width={b.w} height={26} rx={10} fill={s.stroke} opacity={isActive ? 0.18 : 0.1} />
+                    <rect x={b.x} y={b.y} width={b.w} height={BOX_HEADER_H} rx={BOX_RADIUS} fill={s.stroke} opacity={isActive ? 0.18 : 0.1} />
                     <text
                       x={b.x + b.w / 2}
                       y={b.y + 17}
@@ -338,10 +270,8 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
                     </text>
                     {e.caption && (
                       <SvgLabel
-                        // Tall container boxes hold nested entities, so their caption sits
-                        // just below the header strip rather than in the (occupied) center.
-                        cx={b.x + b.w / 2}
-                        cy={b.h >= 170 ? b.y + 40 : b.y + b.h / 2 + (b.h > 80 ? 8 : 2)}
+                        cx={boxCaptionCenter(e).x}
+                        cy={boxCaptionCenter(e).y}
                         width={b.w + 80}
                         height={20}
                         fontSize={11}
