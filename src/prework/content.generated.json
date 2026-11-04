@@ -1,0 +1,2663 @@
+{
+ "repo": "cryptography-camp/prework",
+ "commit": "fae44171ad7aa1ff09b9e5756e794b7537cca38d",
+ "weeks": [
+  {
+   "id": "1",
+   "title": "Week 1",
+   "date": "June 22, 2025",
+   "source": "week1/Week1.tex",
+   "pdfUrl": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week1/Week1.pdf",
+   "blocks": [
+    {
+     "kind": "para",
+     "text": "Welcome! As you begin working through readings and exercises, if you find yourself uncomfortable with the notation and language around sets and functions, consider coming back to the following optional reading."
+    },
+    {
+     "kind": "item",
+     "id": "1/reading-1",
+     "env": "reading",
+     "number": "1",
+     "note": "Background (Optional)",
+     "body": [
+      {
+       "kind": "para",
+       "text": "As needed, read about sets, set notations, functions and function notations in:"
+      },
+      {
+       "kind": "para",
+       "text": "Herstein - Abstract Algebra - pages 3-13."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Our goal this week is to introduce some of the basic constructions from public key cryptography that will be useful moving forward. In particular, we will focus on encryption to motivate our learning of some mathematical background, and then we will also discuss digital signatures in our synchronous time together."
+    },
+    {
+     "kind": "para",
+     "text": "As will be discussed in Reading 4, an asymmetric cipher consists of a public key function, $G: \\Kpriv\\to\\Kpub$, an encryption function, $E: \\M\\times\\Kpub\\to\\C$, and a decryption function, $D: \\C\\times\\Kpriv\\to\\M$, such that $D(E(m, G(k)), k) = m$ (that is, decrypting an encryption with the correct key yields the original message). In this definition, $\\M$ denotes the set of possible messages, $\\Kpriv$ denotes the set of possible private keys, $\\Kpub$ denotes the set of possible public keys, and $C$ denotes the set of possible ciphertexts (a.k.a. encrypted messages). In order to make things more concrete and practical, we will want to replace these abstract sets with specific finite sets. In particular, we will use the integers modulo a prime, $\\Z/p\\Z$ also denoted by $\\Z_p$ or $\\F_p$ depending on the author (or context). In general we will use $p$ to denote a prime integer."
+    },
+    {
+     "kind": "para",
+     "text": "Reading 2 introduces $\\Z/m\\Z$ and its operations (without requiring that $m$ be prime, as we will be assuming later). In particular, this reading introduces an efficient algorithm for modular exponentiation. This is important because we will be using the following public key function: Let $g\\in\\Z_p$ be a fixed non-zero number and define $G: \\Z_p^*\\to\\Z_p$ by $$G(x) = g^x\\bmod p = g\\cdot g\\cdot\\ldots\\cdot g\\bmod p\\text{ (}x\\text{ times)}.$$ We will discuss this further in Reading 5. The problem of trying to compute a private key for a public key with this $G$ is known as the <em>discrete log problem</em>."
+    },
+    {
+     "kind": "item",
+     "id": "1/reading-2",
+     "env": "reading",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about modular arithmetic and fast modular exponentiation in:"
+      },
+      {
+       "kind": "para",
+       "text": "Hoffstein, Pipher, Silverman - An Introduction to Mathematical Cryptography - pages 19-22, 24-26."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "1/exercise-1",
+     "env": "exercise",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Implement the fast exponentiation algorithm in the language of your choice. This will allow us to compute public keys, and will also be useful in future exercises."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "As we work with numbers in $\\Z_p$, it will often be important to compute “modular inverses.” That is, if we have $a\\in\\Z_p$ that is not $0$, then there exists a unique number $b\\in\\Z_p$ such that $ab \\equiv 1\\pmod p$. We call $b$ the modular inverse of $a$, and sometimes denote it by $a^{-1}$. For example, $2\\cdot 3 = 6\\equiv 1\\pmod 5$ so that $2$ and $3$ are each others' modular inverses when $p=5$. Reading 3 describes one method for computing modular inverses, and describes why our modulus, $p$, needs to be a prime number if we want to guarantee the existence of modular inverses. However, this reading is not necessary for our purposes, since we will describe an alternative method for computing modular inverses in Exercise 3. As such, the following reading should not be your highest priority, but you can come back to it if you're ever curious!"
+    },
+    {
+     "kind": "item",
+     "id": "1/reading-3",
+     "env": "reading",
+     "number": "3",
+     "note": "Optional Extra Background",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about prime factorization, the Euclidean algorithm, and Bézout's identity in either of the following:"
+      },
+      {
+       "kind": "para",
+       "text": "Hamkins - Proof and the Art of Mathematics - pages 15-21."
+      },
+      {
+       "kind": "para",
+       "text": "Hoffstein, Pipher, Silverman - An Introduction to Mathematical Cryptography - pages 10-19."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "The most fundamental result when working with modular exponentiation is <em>Fermat's little theorem</em>."
+    },
+    {
+     "kind": "item",
+     "id": "1/exercise-2",
+     "env": "exercise",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Find at least one proof of Fermat’s little theorem online that you find convincing (there are many arguments out there). Be prepared to share! (For those feeling they have little background in math and are daunted, I suggest by starting with either Dirichlet's proof or the “Necklace” proof and using your favorite chat bot)."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Since we will be working in $\\Z_p$ where $p$ is a prime number, we can leverage Fermat's little theorem, and the fact that if $ab\\equiv ac\\pmod p$ and $a\\not\\equiv 0\\pmod p$, then $b\\equiv c\\pmod p$, to come up with an alternative approach to computing a modular inverse that uses our code from Exercise 1."
+    },
+    {
+     "kind": "item",
+     "id": "1/exercise-3",
+     "env": "exercise",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Use Fermat’s little theorem and fast modular exponentiation to come up with an alternative algorithm for computing the multiplicative inverse of an element in $\\Z_p^*$. Implement this algorithm in the language of your choice."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "We now have all of the tools we need to introduce the Diffie-Hellman key exchange and the ElGamal cipher! All of the modular arithmetic we have covered so far will also be needed for our later discussion of Schnorr signatures."
+    },
+    {
+     "kind": "para",
+     "text": "We begin with a general discussion of symmetric and asymmetric ciphers in Reading 4."
+    },
+    {
+     "kind": "item",
+     "id": "1/reading-4",
+     "env": "reading",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about symmetric ciphers, encoding messages, and asymmetric ciphers in:"
+      },
+      {
+       "kind": "para",
+       "text": "Hoffstein, Pipher, Silverman - An Introduction to Mathematical Cryptography - pages 36-47."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "In Reading 5, we look concretely at an asymmetric cipher built from the public key algorithm we have been studying (modular exponentiation). This reading ends by introducing abelian groups, which is the general context where the Diffie-Hellman key exchange and the ElGamal cipher can be implemented. You can think of abelian groups as a trait (or interface, if you prefer the language Java) for which these algorithms can be defined that will later allow us to switch out some of the number system we have been using for Elliptic Curves (which Bitcoin uses) later."
+    },
+    {
+     "kind": "item",
+     "id": "1/reading-5",
+     "env": "reading",
+     "number": "5",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about one-way functions, the discrete log problem for $\\Z_p^*$, the Diffie-Hellman key exchange, the ElGamal cipher, and abelian groups in:"
+      },
+      {
+       "kind": "para",
+       "text": "Hoffstein, Pipher, Silverman - An Introduction to Mathematical Cryptography - pages 59-75."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Test your knowledge by utilizing your code from Exercises 1 and 3 to implement the ElGamal cipher!"
+    },
+    {
+     "kind": "item",
+     "id": "1/exercise-4",
+     "env": "exercise",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Implement ElGamal for $\\Z_p^*$ in the language of your choice."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "1/exercise-5",
+     "env": "exercise",
+     "number": "5",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Once you have completed Exercise 4, describe how ElGamal can be implemented using an arbitrary abelian group. Don't forget to mention how public keys are computed. Explain why using $\\Z_p$ with the operation of addition as your abelian group is insecure (Hint: recall Reading 2)."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "If you wish to read about the details of elliptic curve computations, see Reading 6. However, knowledge of these details will not be necessary moving forward, since we will work at the abstract level of abelian groups and their operations to avoid entangling ourselves in any complicated EC details."
+    },
+    {
+     "kind": "item",
+     "id": "1/reading-6",
+     "env": "reading",
+     "number": "6",
+     "note": "Optional Extension",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about the group of points on an Elliptic Curve in:"
+      },
+      {
+       "kind": "para",
+       "text": "Hoffstein, Pipher, Silverman - An Introduction to Mathematical Cryptography - pages 279-289."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2a",
+   "title": "Week 2a: Informal Proofs and Reductions",
+   "date": "June 29, 2025",
+   "source": "week2/Week2a.tex",
+   "pdfUrl": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week2/Week2a.pdf",
+   "blocks": [
+    {
+     "kind": "para",
+     "text": "Now that we have introduced some of the basic constructions and vocabulary from public key cryptography, our goal this week is to begin our path towards proving that protocols are secure. This turns out to require two distinct skills, so we have split this week into two parts. In this first part (Week 2a), we will practice writing <em>informal</em> mathematical proofs, focusing on the single most important proof technique in cryptography: <em>proof by reduction</em>. In the second part (Week 2b), we will develop just enough <em>probability</em> theory to state security definitions precisely and to verify that our informal arguments actually hold up. The two parts are designed to be read in order, and together they set us up to study the security of Schnorr signatures next week."
+    },
+    {
+     "kind": "para",
+     "text": "Before we begin, a word on what we mean by proof. A proof is a convincing argument that some statement must be true. It should be convincing in the sense that it leaves the reader no room to doubt your conclusions if they accept your premises. Of course, this definition of convincing varies by reader; writing for a beginner audience requires far more justification and detail than writing for experts usually does. For the purposes of this course, I generally recommend trying to write in such a way that would remove all doubt from a reader who is a little less skilled and a little less knowledgeable than you were before you worked on the problem. Ideally you could find your proofs easily readable if you review them a year from now. All of this said, I am not asking you to write formal or fully rigorous proofs, and I am expecting quite a bit of informal reasoning and maybe even some hand-waving. This will be forced upon you by the fact that I won't provide rigorous definitions of all concepts yet, opting instead to start with intuitive notions. Remember, no one is able to write fully rigorous proofs without practice, and these exercises are intended as practice so don't worry too much about perfection. Err instead on the side of getting feedback early and often on your proof attempts."
+    },
+    {
+     "kind": "heading",
+     "text": "Proof by contrapositive"
+    },
+    {
+     "kind": "para",
+     "text": "Perhaps the most prevalent proof technique in cryptography is proof by reduction, which is itself a special case of proof by contrapositive. In logic, an implication $P\\Rightarrow Q$ is true if $Q$ must be true whenever $P$ is true. The contrapositive of an implication $P\\Rightarrow Q$ is the equivalent implication $\\neg Q\\Rightarrow \\neg P$, where $\\neg$ denotes negation (i.e., $\\neg Q$ is read “not $Q$”). These implications are equivalent because each of them is true if and only if $P$ is false or $Q$ is true. Hence, if one is trying to argue some conclusion, $Q$, from some assumption, $P$, argument by contrapositive is the method of assuming that the conclusion is false and arguing that this forces the assumption to be false."
+    },
+    {
+     "kind": "para",
+     "text": "There is a closely related concept called proof by contradiction, in which we prove $P\\Rightarrow Q$ by assuming $Q$ is false while assuming $P$ is true and arriving at a contradiction (such as a statement like $1=0$). This proves $Q$ must be true as otherwise a contradiction arises. Oftentimes a proof by contrapositive is written like a proof by contradiction, which is fine, but I personally believe that if you can use contrapositive then that is superior to contradiction. The reason I believe this despite them being equivalent is that <em>if</em> you make a mistake in your argument, then your proof by contrapositive is likely to fail (since it is built out of a series of implications). On the other hand, if you make a mistake during a proof by contradiction you might be “rewarded” for your misstep as it becomes even easier to find a contradiction from flawed reasoning."
+    },
+    {
+     "kind": "para",
+     "text": "It is worth pausing on a small, non-cryptographic example to see the shape of argument by contrapositive before we apply it to anything hard. Suppose we want to prove the implication “if $n^2$ is even, then $n$ is even,” where $n$ is a whole number. Arguing this directly (that is, starting at the premise that $n^2$ is even and using various facts to imply the conclusion that $n$ is even) is awkward, but the contrapositive is easy: “if $n$ is <em>not</em> even (i.e., $n$ is odd), then $n^2$ is <em>not</em> even (i.e., $n^2$ is odd).” To see this, write an odd number as $n = 2k+1$; then $n^2 = 4k^2 + 4k + 1 = 2(2k^2 + 2k) + 1$, which is odd. Having proven the contrapositive, we have proven the original statement. Notice the move we made: rather than starting from the hypothesis we cared about, we started by <em>assuming the conclusion was false</em> and showed that this is impossible unless the hypothesis was also false."
+    },
+    {
+     "kind": "item",
+     "id": "2a/exercise-1",
+     "env": "exercise",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Warm-up. Let $n$ be a whole number. Using proof by contrapositive, show that if $n^2$ is a multiple of $3$, then $n$ is a multiple of $3$. State clearly what $P$ and $Q$ are, what their negations are, and where in your argument you use the assumption that the conclusion is false. (Hint: every whole number can be written as $3k$, $3k+1$, or $3k+2$.) Optional fun extension: Can you generalize the example above and the result and proof of this exercise?"
+      }
+     ]
+    },
+    {
+     "kind": "heading",
+     "text": "Proof by reduction"
+    },
+    {
+     "kind": "para",
+     "text": "In cryptography, we very often want to show that if we assume that problem $X$ is hard to solve, then another problem, $Y$, is also hard to solve. Written as an implication, this is “($X$ is hard) $\\Rightarrow$ ($Y$ is hard).” Its contrapositive is “($Y$ is <em>not</em> hard) $\\Rightarrow$ ($X$ is <em>not</em> hard),” or in plainer terms, “if $Y$ is easy, then $X$ is easy.” A proof by reduction is exactly a proof of this contrapositive: we assume we are handed an efficient solution to $Y$ as a black box, and we use it as a subroutine to build an efficient solution to $X$."
+    },
+    {
+     "kind": "para",
+     "text": "A useful way to picture this: imagine someone sells you a magic box that efficiently solves problem $Y$. A reduction is a recipe that wires that box up — possibly transforming its inputs and outputs — so that the whole contraption efficiently solves problem $X$. If such a recipe exists, then “$Y$ is easy” really does imply “$X$ is easy,” and so (taking the contrapositive) “$X$ is hard” implies “$Y$ is hard.” The art of a reduction is figuring out how to feed your $Y$-box the right inputs and interpret its outputs to extract a solution to $X$."
+    },
+    {
+     "kind": "para",
+     "text": "Let's take a moment to understand this through a concrete example."
+    },
+    {
+     "kind": "para",
+     "text": "Recall that the Discrete Log (DL) assumption for a group $\\G$ is that it is hard to compute $x$ given $g^x$ as input, where $g$ is the generator for $\\G$. A related assumption, known as the One More Discrete Log (OMDL) assumption for $\\G$, states that if a program is given some (positive) number, $k$, of random group elements, $g^{x_1},g^{x_2},\\ldots, g^{x_k}$, and it is able to ask for and receive discrete logarithms for any $k-1$ group elements, then computing all of the values $x_1, x_2,\\ldots, x_k$ is still hard. We can use reduction to see that if the OMDL assumption holds for a group, then the DL assumption holds. Specifically, this proof by reduction requires us to show that if the DL problem is easy to solve, then it will be easy to solve the OMDL problem. But of course, if we can compute discrete logarithms in a group with non-negligible probability (i.e., the DL problem is easy), then we can trivially solve the OMDL problem by asking for the discrete logs for $g^{x_1},\\ldots, g^{x_{k-1}}$ and then using our DL-solver to directly compute the $k$th discrete log with non-negligible probability."
+    },
+    {
+     "kind": "para",
+     "text": "Let us name the parts of that argument so the pattern is visible, since you will reproduce it many times. Here $X$ is the OMDL problem (the one we assume is hard) and $Y$ is the DL problem (the one we assume, for contradiction, is easy). The “magic box” is the DL-solver. The reduction is: forward the first $k-1$ challenges to the discrete-log oracle we are allowed to query, run the DL-solver on the final challenge, and output everything. Because the box succeeds with non-negligible probability, so does our contraption — which is what it means for OMDL to be easy."
+    },
+    {
+     "kind": "para",
+     "text": "Before tackling a full cryptographic reduction, it helps to do one where the box and the wiring are about as simple as possible."
+    },
+    {
+     "kind": "item",
+     "id": "2a/exercise-2",
+     "env": "exercise",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Warm-up reduction. Recall the Diffie-Hellman setup, where two parties have public keys $X = g^x$ and $Y = g^y$ and their shared secret is $Z = g^{x\\cdot y}$. Suppose someone hands you an efficient “magic box” that solves the discrete log problem: given any group element $g^a$ it returns $a$. Using this box as a subroutine, describe an efficient procedure that, given only $X = g^x$ and $Y = g^y$ (but not $x$ or $y$), computes the Diffie-Hellman shared secret $Z = g^{x\\cdot y}$. Then state, in one sentence, which implication between assumptions you have just informally proven via its contrapositive."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "We are now ready for a reduction that matters for the rest of the course."
+    },
+    {
+     "kind": "item",
+     "id": "2a/exercise-3",
+     "env": "exercise",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Let $\\G$ be an abelian group with an element, $g\\in\\G$, of prime order $n$. A Schnorr signature of a message, $m$, by a private key, $x\\in\\Z/n\\Z$, is a pair $(R, s)$ such that $s = k + H(R, m)\\cdot x\\in \\Z/n\\Z$ and $R = g^k\\in\\G$ is the nonce ($k$ is a random element of $\\Z/n\\Z$ generated for this signature). Intuitively, this works because $s$ commits to the message using a hash, multiplies by the private key, but it does not reveal the private key because of the random blinding value $k$. A Schnorr signature can be verified by checking the equation $g^s == R\\cdot X^{H(R, m)}$, where $X = g^x$ is the signer's public key."
+      },
+      {
+       "kind": "para",
+       "text": "Use proof by reduction to show that if we assume that the discrete log problem is hard in $\\G$, then we can conclude that it is hard to forge two Schnorr signatures for the same nonce and key, that is, if we are given a public key $X = g^x$ and nonce $R$ (without being given $x$ or $k$) it is hard to compute two different messages $m_1$ and $m_2$ and values $s_1$ and $s_2$ such that $(R, s_1)$ and $(R, s_2)$ are valid signatures for $X$ of $m_1$ and $m_2$, respectively."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "This will later be an important part of the proof of the stronger statement that if the discrete log problem is hard, then Schnorr signatures are unforgeable in a much stronger sense."
+    },
+    {
+     "kind": "heading",
+     "text": "Attack Games: making “hard” and “easy” more precise"
+    },
+    {
+     "kind": "para",
+     "text": "In the above exercises, we are working with an informal notion of what it means for something to be “hard” and for something to be “easy,” and we will now want to make this more precise. (We will only make it <em>fully</em> precise once we have probability in Week 2b and a notion of negligible functions in Week 3; for now we are formalizing the <em>structure</em> of these claims.)"
+    },
+    {
+     "kind": "para",
+     "text": "In cryptographic assumption definitions, we make these kinds of statements precise and functional by formalizing them as attack games. In an attack game, we model the adversary as a program that interacts with another program, the challenger (aka the environment, aka the context). In this case, we have to define a very simple game where the adversary is challenged to compute the discrete log of a group element (where $g$ is a fixed generator), as depicted in the attack game $\\game{\\algo{DL}}{}$ in Figure 1. Note that this game is parameterized by $\\lambda$, which is the key size. We take this opportunity to introduce two other common cryptographic assumptions relating to last week's Diffie-Hellman key exchange. Recall that in the Diffie-Hellman key exchange, each party has a public key, $X = g^x$ and $Y = g^y$, and then their shared secret is $Z = g^{x\\cdot y}$. The Computational Diffie-Hellman (CDH) assumption is that it is “hard” to compute $Z$ given only $X$ and $Y$, this is shown in the attack game $\\game{\\algo{CDH}}{}$ in Figure 1. Lastly, there is a variation of the CDH assumption called the Decisional Diffie-Hellman (DDH) assumption, which states that is it “hard” to distinguish between a Diffie-Hellman shared secret and a truly random group element (given access to the public keys $X$ and $Y$); this is made precise in the attack game $\\game{\\algo{DDH}}{}$ in Figure 1."
+    },
+    {
+     "kind": "figure",
+     "id": "2a/figure-1",
+     "number": 1,
+     "caption": "Attack games for the DL, CDH, and DDH cryptographic assumptions. ($\\Z(\\lambda)$ is $\\Z_p$ for a prime, $p>2^\\lambda$, which makes $\\lambda$ the key size, $g$ is a fixed generator for the group $\\G(\\lambda)$ of size $p$, and the symbol $\\$$ means chosen uniformly at random).",
+     "pseudocode": {
+      "id": "2a/figure-1",
+      "caption": "Attack games for the DL, CDH, and DDH cryptographic assumptions. ($\\Z(\\lambda)$ is $\\Z_p$ for a prime, $p>2^\\lambda$, which makes $\\lambda$ the key size, $g$ is a fixed generator for the group $\\G(\\lambda)$ of size $p$, and the symbol $\\$$ means chosen uniformly at random).",
+      "layout": "hstack",
+      "procedures": [
+       {
+        "title": "$\\game{\\algo{DL}}{}$",
+        "lines": [
+         {
+          "code": "x \\sample \\Z(\\lambda)"
+         },
+         {
+          "code": "X \\gets g^x"
+         },
+         {
+          "code": "\\hat{x} \\gets \\adv(\\lambda, X)"
+         },
+         {
+          "code": "\\pcreturn \\hat{x} = x"
+         }
+        ]
+       },
+       {
+        "title": "$\\game{\\algo{CDH}}{}$",
+        "lines": [
+         {
+          "code": "x,y \\sample \\Z(\\lambda)"
+         },
+         {
+          "code": "X \\gets g^x"
+         },
+         {
+          "code": "Y \\gets g^y"
+         },
+         {
+          "code": "Z \\gets g^{x\\cdot y}"
+         },
+         {
+          "code": "\\hat{Z} \\gets \\adv(\\lambda, X, Y)"
+         },
+         {
+          "code": "\\pcreturn \\hat{Z} = Z"
+         }
+        ]
+       },
+       {
+        "title": "$\\game{\\algo{DDH}}{}$",
+        "lines": [
+         {
+          "code": "x,y,z \\sample \\Z(\\lambda)"
+         },
+         {
+          "code": "b \\sample \\{0,1\\}"
+         },
+         {
+          "code": "X \\gets g^x"
+         },
+         {
+          "code": "Y \\gets g^y"
+         },
+         {
+          "code": "Z_0 \\gets g^z"
+         },
+         {
+          "code": "Z_1 \\gets g^{x\\cdot y}"
+         },
+         {
+          "code": "\\hat{b} \\gets \\adv(\\lambda, X, Y, Z_b)"
+         },
+         {
+          "code": "\\pcreturn \\hat{b} = b"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "kind": "para",
+     "text": "For each of these games, we define the advantage an adversary program, $\\adv$, has as"
+    },
+    {
+     "kind": "para",
+     "text": "$$\\begin{aligned}\\advantage{DL}{\\adv} &:= \\pr{\\game{\\algo{DL}}{} = \\text{true}},\\\\\n\\advantage{CDH}{\\adv} &:= \\pr{\\game{\\algo{CDH}}{} = \\text{true}},\\\\\n\\advantage{DDH}{\\adv} &:= \\pr{\\game{\\algo{DDH}}{} = \\text{true}} - \\frac{1}{2},\\end{aligned}$$"
+    },
+    {
+     "kind": "para",
+     "text": "where $\\pr{\\cdot}$ is the probability function, which we will discuss in much more detail in Week 2b. For now, read $\\pr{\\game{\\algo{DL}}{} = \\text{true}}$ as “the chance, over the random choices made inside the game, that the adversary wins.” Note that because an adversary that just picks its value randomly wins the $\\game{\\algo{DDH}}{}$ game half of the time, we define the advantage an adversary has to be how much better than probability $\\frac{1}{2}$ it can do. Finally, we can make our assumptions formal and complete by saying that the DL assumption holds for a family of groups, $\\G(\\lambda)$, if for all programs, $\\adv$, the value $\\advantage{DL}{\\adv}$ is negligible. Similarly, we say that the CDH or DDH assumptions hold if $\\advantage{CDH}{\\adv}$ or $\\advantage{DDH}{\\adv}$ are negligible for all programs, $\\adv$. We will formalize what it means for a function of $\\lambda$ to be negligible next week, but for now just think of it as a value that becomes small exponentially fast as $\\lambda$ increases, or just think of it informally as really really unbelievably small when key sizes are reasonably large."
+    },
+    {
+     "kind": "para",
+     "text": "Notice that an attack game turns the vague phrase “problem $X$ is hard” into the precise phrase “every program has negligible advantage in the game $\\game{\\algo{X}}{}$.” Crucially, this also gives our reductions a concrete target. When we say “if $Y$ is easy then $X$ is easy,” we now mean: “given a program $\\adv$ with non-negligible advantage in $\\game{\\algo{Y}}{}$, we can build a program $\\adv'$ with non-negligible advantage in $\\game{\\algo{X}}{}$.” The reduction <em>is</em> the construction of $\\adv'$ out of $\\adv$. The next exercise asks you to do this for the three assumptions above."
+    },
+    {
+     "kind": "item",
+     "id": "2a/exercise-4",
+     "env": "exercise",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Use proof by reduction and the definitions above to informally show that"
+      },
+      {
+       "kind": "list",
+       "ordered": true,
+       "marker": "(a)",
+       "items": [
+        [
+         {
+          "kind": "para",
+          "text": "If the DDH assumption holds, then the CDH assumption holds."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "If the CDH assumption holds, then the DL assumption holds."
+         },
+         {
+          "kind": "para",
+          "text": "In order to solve this part, you may use two facts that we will prove later (though it is possible to do this exercise without):"
+         },
+         {
+          "kind": "list",
+          "ordered": true,
+          "marker": "(1)",
+          "items": [
+           [
+            {
+             "kind": "para",
+             "text": "If you have two independent events $A$ and $B$, then $\\pr{A\\text{ and }B} = \\pr{A}\\cdot\\pr{B}$. (We will define independence and prove this in Week 2b.)"
+            }
+           ],
+           [
+            {
+             "kind": "para",
+             "text": "If $F(\\lambda)$ is not negligible, then $F(\\lambda)^2$ is also not negligible. (We will prove this next week.)"
+            }
+           ]
+          ]
+         }
+        ]
+       ]
+      },
+      {
+       "kind": "para",
+       "text": "(Hint: for each part, start by writing “suppose $\\adv$ is a program with non-negligible advantage in the <em>easier-to-attack</em> game,” then describe the program $\\adv'$ you build and which game it attacks. For (a), think about what an attacker that can <em>compute</em> $Z$ lets you do in a game that only asks you to <em>distinguish</em> $Z$ from random.)"
+      }
+     ]
+    },
+    {
+     "kind": "heading",
+     "text": "Looking ahead"
+    },
+    {
+     "kind": "para",
+     "text": "We have now seen how to phrase “hardness” as an attack game and how to relate one hardness assumption to another by reduction. Two things are still missing. First, all of our advantages were written in terms of a probability function $\\pr{\\cdot}$ that we have not yet defined. Second, our reductions so far have only needed to reason about probability very loosely (“non-negligible in, non-negligible out”); to prove that a concrete scheme like the one-time pad is secure, we will need to actually <em>compute</em> probabilities. Both gaps are filled in Week 2b, where we develop the small amount of probability theory we need and then use it, together with the reduction technique from this part, to prove our first real security theorems. We will also return to use the DL, CDH, and DDH assumptions above when we study Schnorr signatures next week."
+    }
+   ]
+  },
+  {
+   "id": "2b",
+   "title": "Week 2b: Probability",
+   "date": "June 29, 2025",
+   "source": "week2/Week2b.tex",
+   "pdfUrl": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week2/Week2b.pdf",
+   "blocks": [
+    {
+     "kind": "para",
+     "text": "In Week 2a we learned to phrase “problem $X$ is hard” as the statement that every program has negligible <em>advantage</em> in an attack game, and we learned to relate one hardness assumption to another using proof by reduction. We also saw proof by reduction used to prove that some security claim followed from a hardness assumption. Throughout, the advantage was written in terms of a probability function $\\pr{\\cdot}$ that we treated as a black box. In this second part of the week we open that black box. We will develop just enough probability theory to define $\\pr{\\cdot}$ carefully, and then we will put it to work: we will give a precise security definition for symmetric-key encryption and use probability, together with the reduction technique from Week 2a, to prove our first real security theorems. Because all of the sets we care about in this course (keys, messages, ciphertexts) are finite, we will be able to get away with a very small amount of theory."
+    },
+    {
+     "kind": "para",
+     "text": "It will help to have a concrete goal to aim the theory at, so we begin by setting up the security question we want to answer, and only then build the tools to answer it."
+    },
+    {
+     "kind": "heading",
+     "text": "A motivating problem: when is an encryption scheme secure?"
+    },
+    {
+     "kind": "para",
+     "text": "Let us pivot to the context of symmetric-key encryption, which lets us study what security definitions look like in a simpler setting without public keys, so that we can prove some substantial facts. (We will return to the public-key cryptographic assumptions from Week 2a when we study Schnorr signatures next week.)"
+    },
+    {
+     "kind": "para",
+     "text": "Recall from Reading 4 of Week 1 that one example of a symmetric cipher is the one-time pad, where our keys, messages, and ciphertexts are all $\\lambda$-bit binary strings, our encryption function is $E(k, m) = k\\oplus m$ and our decryption function is $D(k, c) = k\\oplus c$, where $\\oplus$ is bitwise xor. We want to precisely make the claim that the one-time pad is a secure encryption function, but what does this mean? One phrasing we might try is that for any two messages, $m_1$ and $m_2$, no adversary (who does not know $k$) can distinguish whether a ciphertext, $c$, corresponds to an encryption of $m_1$ or an encryption of $m_2$. But this leaves a few questions unanswered: What is an adversary? Which messages are being used? Who chooses the messages and who encrypts them?"
+    },
+    {
+     "kind": "para",
+     "text": "As with the cryptographic assumptions in Week 2a, in security definitions we make these kinds of statements precise and functional by formalizing them as attack games. In this case, we have to define a game where the adversary is challenged to distinguish what message a ciphertext corresponds to. In order to have the strongest possible notion of security, we give the adversary as much information and control as we can in the game, so we will let the adversary pick the messages $m_1$ and $m_2$, the adversary will then give these messages to the challenger and the challenger will generate a random key, $k$, choose a random message to encrypt, and return this encryption to the adversary. Finally, the adversary will have to guess whether the ciphertext it was given is an encryption of $m_1$ or of $m_2$. The adversary wins this game if its guess is correct, and loses otherwise. A succinct definition of this game is given by the $\\game{\\algo{DistinguishCipher}}{}$ program in Figure 1."
+    },
+    {
+     "kind": "figure",
+     "id": "2b/figure-1",
+     "number": 1,
+     "caption": "Encryption Distinguishing game ($\\$$ means chosen uniformly at random)",
+     "pseudocode": {
+      "id": "2b/figure-1",
+      "caption": "Encryption Distinguishing game ($\\$$ means chosen uniformly at random)",
+      "layout": "hstack",
+      "procedures": [
+       {
+        "title": "$\\game{\\algo{DistinguishCipher}}{}$",
+        "lines": [
+         {
+          "code": "m_0, m_1 \\gets \\adv(\\lambda)"
+         },
+         {
+          "code": "c \\gets Encrypt(\\lambda, m_0, m_1)"
+         },
+         {
+          "code": "\\hat{b} \\gets \\adv(c)"
+         },
+         {
+          "code": "\\pcreturn b = \\hat{b}"
+         }
+        ]
+       },
+       {
+        "title": "$\\algo{Encrypt}(\\lambda, m_1,m_2)$",
+        "lines": [
+         {
+          "code": "k \\sample \\{0,1\\}^\\lambda"
+         },
+         {
+          "code": "b \\sample \\{0,1\\}"
+         },
+         {
+          "code": "\\pcreturn E(k, m_b)"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "kind": "para",
+     "text": "Since an adversary that just picks all of its values randomly wins the $\\game{\\algo{DistinguishCipher}}{}$ game half of the time, we define the advantage an adversary, $\\adv$, has in this game to be $$\\advantage{DistinguishCipher}{\\adv} := \\pr{\\game{\\algo{DistinguishCipher}}{} = \\text{true}} - \\frac{1}{2}.$$ Finally, we can define $E$ to be secure if for all adversary programs $\\adv$, the advantage of $\\adv$ is negligible."
+    },
+    {
+     "kind": "para",
+     "text": "This is a perfectly precise definition — except that, just like in Week 2a, it leans entirely on the probability function $\\pr{\\cdot}$, and to actually <em>prove</em> anything about a scheme we will have to compute quantities like $\\pr{\\game{\\algo{DistinguishCipher}}{} = \\text{true}}$. So let us now develop the probability we need, and then we will come back and prove that the one-time pad is secure."
+    },
+    {
+     "kind": "heading",
+     "text": "The basics of (finite) probability"
+    },
+    {
+     "kind": "para",
+     "text": "In order to work with security definitions such as the one above, we will need to develop a little bit of background in probability so that we can properly reason about advantages. All of our sets (for example, of possible keys or of possible messages) are finite, so we will not need to introduce very much of the general theory. Whenever discussing probabilities there will implicitly be a (finite) set of possible states/outcomes, $\\Omega$, and subsets of this state space are known as events. For example, if we are rolling a $6$-sided die to set our (very weak) private key, we could model this situation with $\\Omega = \\{1,2,3,4,5,6\\}$ and the event that you roll an even number (i.e., the event that the least significant bit is 0) is given by the subset $\\{2,4,6\\}$. For our purposes, given a state space, $\\Omega$, the function $\\pr{E}$ that takes events as input is defined as follows:"
+    },
+    {
+     "kind": "list",
+     "ordered": true,
+     "items": [
+      [
+       {
+        "kind": "para",
+        "text": "$\\pr{E}\\geq 0$ for all events $E\\subseteq \\Omega$. That is, probability is not negative."
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "$\\pr{\\Omega} = 1$. That is, the probability that one of our outcomes occurs is $1$."
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "$\\pr{E} = \\sum_{x\\in E}\\pr{\\{x\\}}$. In other words, every individual state has a probability and the probability of an event is the sum of the probabilities of its elements."
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Thus, if we assume our $6$-sided die has each of its outcomes occurring with probability $\\frac{1}{6}$ (which satisfies our probability rules), then the probability of rolling an even number is $\\frac{1}{6} + \\frac{1}{6} + \\frac{1}{6} = \\frac{3}{6} = \\frac{1}{2}$, as we would expect. In general, we call the assignment of probabilities to individual states a <em>probability distribution</em> (assuming all the values are non-negative and add up to $1$). For example, if we have a set of $N$ outcomes, $\\Omega$, then the <em>uniform</em> probability distribution on $\\Omega$ is the assignment of $\\pr{x} = \\frac{1}{N}$ for every $x\\in\\Omega$; when working with uniform distributions, computing probabilities is always the same as counting the number of states in an event (and then dividing by $N$)."
+    },
+    {
+     "kind": "para",
+     "text": "With all of this in mind, when our game says $k \\sample \\{0,1\\}^\\lambda$, it is declaring that $k$ is drawn from the uniform distribution on the $2^\\lambda$ possible keys, so each particular key has probability $\\frac{1}{2^\\lambda}$. Computing the probability of some event about $k$ will, for us, almost always come down to counting."
+    },
+    {
+     "kind": "item",
+     "id": "2b/exercise-1",
+     "env": "exercise",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Warm-up. A single key $k$ is drawn uniformly at random from $\\{0,1\\}^3$ (so $\\Omega$ has $8$ states, each of probability $\\frac{1}{8}$). Using only the three rules above, compute: (a) the probability that $k$ starts with a $0$; (b) the probability that $k$ has an even number of $1$s; (c) the probability that $k = 010$. For each, write down the event as a subset of $\\Omega$ before computing its probability, so that you are explicitly using rule 3."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "2b/exercise-2",
+     "env": "exercise",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Suppose there is a room with $30$ people, and assume that the probabilities of all assignments of one of the $365$ possible birthdays to each of the $30$ people are equal (this is of course not true, but assuming a uniform distribution will make things simpler). Compute the probability that no two people share a birthday, and then compute the probability that at least two people share a birthday."
+      },
+      {
+       "kind": "para",
+       "text": "(If instead of people and birthdays we think of inputs and hash values, this “birthday problem” shows that finding hash collisions is easier than finding hash pre-images)."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "If you would like an additional resource on probability that moves through some of the above topics in a different way and with more depth (and rigor) with more examples, see the following optional reading. However unless you're full of free time, I strongly recommend not spending your time on this unless you are actually getting badly stuck, and even then maybe consult me or discourse for help first."
+    },
+    {
+     "kind": "item",
+     "id": "2b/reading-1",
+     "env": "reading",
+     "number": "1",
+     "note": "Optional",
+     "body": [
+      {
+       "kind": "para",
+       "text": "If you find yourself wanting more probability practice, read about the axioms of probability and conditional probability in:"
+      },
+      {
+       "kind": "para",
+       "text": "Ross - First Course in Probability (5th ed.) - pages 25-39, 67-89."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "2b/exercise-3",
+     "env": "exercise",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Explain why the following is true using the definition of probability: $$\\pr{\\bigcup_{i=1}^n E_i}\\leq \\sum_{i=1}^n\\pr{E_i}.$$ When are these two values equal? (Hint: first try the case where $n=2$)."
+      },
+      {
+       "kind": "para",
+       "text": "In case this notation is not familiar to you, $\\bigcup_{i=1}^n E_i = E_1\\cup E_2\\cup\\cdots\\cup E_n$ refers to the union of all of the sets $E_1$ through $E_n$, and $\\sum_{i=1}^n\\pr{E_i} = \\pr{E_1} + \\pr{E_2} + \\cdots + \\pr{E_n}$ refers to the sum of all of the probabilities $\\pr{E_1}$ through $\\pr{E_n}$. You can think of both of these as essentially for loops."
+      },
+      {
+       "kind": "para",
+       "text": "(This inequality is called the <em>union bound</em>, and it is one of the most-used tools in all of cryptography: it lets us upper-bound the probability that <em>anything</em> goes wrong by the sum of the probabilities of each individual bad event.)"
+      }
+     ]
+    },
+    {
+     "kind": "heading",
+     "text": "Conditional probability and independence"
+    },
+    {
+     "kind": "para",
+     "text": "An important notion in probability, that we have already used informally in Week 2a, is when two events are <em>independent</em>. Intuitively this means that two events are uncorrelated. In order to capture this notion precisely, we first introduce the notion of <em>conditional probability</em>: $$\\pr{E_1\\mid E_2} := \\frac{\\pr{E_1\\cap E_2}}{\\pr{E_2}}.$$ This formula is read “the probability that $E_1$ occurs <em>given</em> that $E_2$ occurs is equal to the probability that $E_1$ and $E_2$ both occur divided by the probability that $E_2$ occurs.” This makes sense in our definition of probability because the information that $E_2$ occurs essentially is the same as replacing our original set of possible outcomes, $\\Omega$, with $E_2$ instead, and re-interpreting the event $E_1$ as the set of states in $E_1$ that are also in our new set of possible outcomes, $E_2$, throwing away the rest of the states. Note that this definition requires that $\\pr{E_2}\\neq 0$ to avoid division by $0$, but this is of no consequence since there isn't much use in conditionalizing on a probability $0$ event."
+    },
+    {
+     "kind": "para",
+     "text": "An important and immediate result is that $\\pr{E_1\\cap E_2} = \\pr{E_1\\mid E_2}\\cdot \\pr{E_2}$. This observation allows us to compute probabilities by breaking a state space up into cases. Suppose that the state space has a partition into two pieces: $\\Omega = A\\cup B$ and there is no intersection between these pieces ($A\\cap B = \\emptyset$). Then we can compute the probability of any event, $E$, by splitting into the $A$ and $B$ cases using rule 3 as follows,"
+    },
+    {
+     "kind": "para",
+     "text": "$$\\begin{aligned}\\pr{E} &=  \\pr{E\\cap A} + \\pr{E\\cap B}\\\\\n&= \\pr{E\\mid A}\\cdot \\pr{A} + \\pr{E\\mid B}\\cdot\\pr{B}.\\end{aligned}$$"
+    },
+    {
+     "kind": "para",
+     "text": "And more generally, it similarly follows that for any partition $\\Omega = \\cup_{i=1}^nA_i$ (such that none of the $A_i$ have any states in common), we have $$\\pr{E} = \\sum_{i=1}^n\\pr{E\\cap A_i} = \\sum_{i=1}^n\\pr{E\\mid A_i}\\cdot \\pr{A_i}.$$ One way to think about this equation (called the <em>law of total probability</em>) is that it says that you can always compute a probability, $\\pr{E}$, as a weighted average of the conditional probabilities that $E$ occurs over some partition of the state space, where the weights used are the probabilities of the partition elements."
+    },
+    {
+     "kind": "para",
+     "text": "Now that we have conditional probabilities, we can define what it means for two events to be independent: We say that $E_1$ and $E_2$ are <em>independent events</em> if $\\pr{E_1\\mid E_2} = \\pr{E_1}$. Intuitively, this says that learning $E_2$ happened tells you nothing about whether $E_1$ happened."
+    },
+    {
+     "kind": "item",
+     "id": "2b/exercise-4",
+     "env": "exercise",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Warm-up for the law of total probability. A fair coin is flipped. If it comes up heads, you roll a $6$-sided die; if it comes up tails, you roll a $4$-sided die (with faces $1,2,3,4$). Let $E$ be the event that the die shows a $3$. Define $\\Omega$ for this experiment and use the partition of the outcome space into the “heads” and “tails” events to compute $\\pr{E}$ as $\\pr{E\\mid \\text{heads}}\\cdot\\pr{\\text{heads}} + \\pr{E\\mid \\text{tails}}\\cdot\\pr{\\text{tails}}$. This is exactly the case-splitting move you will need in the one-time pad proof below."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "2b/exercise-5",
+     "env": "exercise",
+     "number": "5",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Using the definitions above, show that two events, $E_1$ and $E_2$, are independent if and only if $P(E_1\\cap E_2) = P(E_1)\\cdot P(E_2)$. This is the usual textbook definition of independent events, but it sometimes hides the intuition behind what this has to do with independence."
+      }
+     ]
+    },
+    {
+     "kind": "heading",
+     "text": "Proving the one-time pad secure"
+    },
+    {
+     "kind": "item",
+     "id": "2b/exercise-6",
+     "env": "exercise",
+     "number": "6",
+     "note": "Simple but hard",
+     "body": [
+      {
+       "kind": "para",
+       "text": "We now have all of the tools we need to prove that the one-time pad is secure!"
+      },
+      {
+       "kind": "list",
+       "ordered": true,
+       "marker": "(a)",
+       "items": [
+        [
+         {
+          "kind": "para",
+          "text": "Let us begin with the example of the single-bit encryption case (where $\\lambda = 1$). Show that for all adversary programs, $\\adv$, it is always true that $\\advantage{DistinguishCipher}{\\adv} = 0$."
+         },
+         {
+          "kind": "para",
+          "text": "(Hint: let $\\Omega = \\K\\times\\{0,1\\}\\times R$ be the set of triples with one element from $\\K = \\{0,1\\}$, another bit element from $\\{0,1\\}$, and an element of some set, $R$, which represents the randomness used by our adversary (these are sources of randomness). Show that if $m_0$ and $m_1$ are any pair of messages, then $\\pr{\\adv(c) = b} = \\frac{1}{2}$, where $c = E(k, m_b) = k\\oplus m_b$ and $\\adv$ is any program, by breaking into the four cases $(k,b) = (0,0), (0, 1), (1, 0), (1, 1)$ and then using the partition of $\\Omega$ into sets where $k$ and $b$ are fixed to compute $\\pr{\\adv(c) = b}$. Note that you will also have to treat separately the case that $m_0=m_1$ and the case that $m_0\\neq m_1$)."
+         },
+         {
+          "kind": "para",
+          "text": "(Extra hint if you get stuck near the end: Remember $\\pr{\\adv(c) = 0} + \\pr{\\adv(c) = 1} = 1$ for any fixed value of $c$ since the probability that $\\adv$ returns an output must be $1$)."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "Using the same general argument as in the previous part, show that $\\advantage{DistinguishCipher}{\\adv} = 0$ for all $\\lambda$ and for all adversaries, $\\adv$."
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "The general idea here is that since $k\\oplus m$ is independent of $m$ when $k$ is uniformly random, no program can use $k\\oplus m$ as input to gain any information at all. This is actually much stronger than our requirement for security; having $\\advantage{DistinguishCipher}{\\adv} = 0$ instead of just having it be negligible, is called <em>perfect secrecy</em>, which was a notion developed by Shannon as he was inventing information theory. Unfortunately, Shannon also proved a theorem showing that if we require perfect secrecy, then our key sizes must always be at least as large as message sizes (that is, $\\verts{\\K} \\geq \\verts{\\M}$). This is in stark contrast to the world we are used to, where fixed key sizes can be used to encrypt very large messages. This is often accomplished by stretching a key by using it as the seed to a pseudo-random generator and then using the output of this pseudo-random generator to do encryption. Our final goal this week is to put together much of what we have learned so far to prove that this is secure! This accomplishment demonstrates the power of using negligible advantages instead of advantages equal to $0$ in security definitions."
+    },
+    {
+     "kind": "heading",
+     "text": "Stretching a key: pseudo-random generators and stream ciphers"
+    },
+    {
+     "kind": "para",
+     "text": "A <em>pseudo-random generator</em> (PRG), $G$, is an efficient deterministic algorithm that takes as input an input from $\\mathcal{S} = \\{0,1\\}^\\ell$ and outputs an element from $\\mathcal{R} = \\{0,1\\}^L$ where $L > \\ell$ (for our purposes this week, we can take $L = \\ell + C$ for some large constant $C$). We often call the elements of $\\mathcal{S}$ seeds."
+    },
+    {
+     "kind": "item",
+     "id": "2b/exercise-7",
+     "env": "exercise",
+     "number": "7",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Using the security definitions we have seen so far as a model, define an attack game that calls on an adversary to distinguish between an output of $G$ and a truly random element. Define the advantage an adversary has in this game, and define what it means for a PRG, $G$, to be secure in terms of advantages."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "We define the <em>stream cipher</em> associated to a PRG, $G$, to be the functions $(E_G, D_G)$ given by $E_G(k, m) = G(k)\\oplus m$ and $D_G(k, c) = G(k)\\oplus c$, which is like the one-time pad except that we first stretch our key using $G$."
+    },
+    {
+     "kind": "item",
+     "id": "2b/exercise-8",
+     "env": "exercise",
+     "number": "8",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Using the definition of a secure cipher given in Figure 1, and your definition of a secure PRG from the previous exercise, use proof by reduction (the technique from Week 2a) to show that if $G$ is a secure PRG, then $E_G$ is a secure encryption function. You may use the fact, that we will prove next week, that if $F(\\lambda)$ is not negligible, then $\\frac{F(\\lambda)}{2}$ is also not negligible."
+      },
+      {
+       "kind": "para",
+       "text": "Hint: Given a program $\\adv$ that has a non-negligible advantage against the game in Figure 1 for $E_G$, construct an adversary program $A'(L, r)$ that plays your game from the previous exercise by using $r$ as a one-time pad key to encrypt a random message given by $A(L)$. To argue that $A'$ has a non-negligible advantage, use the law of total probability to split on the challenger's hidden bit: $$\\pr{\\adv'\\text{ wins}} = \\frac{1}{2}\\cdot \\pr{\\adv'\\text{ wins}\\mid r\\text{ is random}} + \\frac{1}{2}\\cdot \\pr{\\adv'\\text{ wins}\\mid r=G(s)}.$$ Notice that this is the same case-splitting move you practiced in Exercise 4, now doing real work: one term is governed by the perfect secrecy of the one-time pad, and the other by $\\adv$'s advantage against $E_G$."
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "3",
+   "title": "Week 3",
+   "date": "July 9, 2025",
+   "source": "week3/Week3.tex",
+   "pdfUrl": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week3/Week3.pdf",
+   "blocks": [
+    {
+     "kind": "para",
+     "text": "This week has a little less content volume than last week, so I want to encourage you to also review and become more comfortable with the Week 2 documents and their exercises as part of this week's assignment."
+    },
+    {
+     "kind": "para",
+     "text": "Now that we have a little bit of experience working with security definitions using attack games and probabilities, our goal this week is to make all of the details rigorous to pave the way for the study of the security of Schnorr digital signatures, which we will continue next week."
+    },
+    {
+     "kind": "para",
+     "text": "The primary missing piece in our formalism from last week is the definition of the notion that a probability is “negligible.” Recall that this notion was central to all of our security definitions, which were all the result of requiring all advantage values to be negligible."
+    },
+    {
+     "kind": "para",
+     "text": "For those who like accompanying visuals, see Figure 1."
+    },
+    {
+     "kind": "figure",
+     "id": "3/figure-1",
+     "number": 1,
+     "caption": "A negligible function eventually dips below every inverse polynomial, no matter how large its degree. On a log-log plot like the one above, the inverse polynomials $\\frac{1}{n^c}$ are straight lines (with slope -c); a negligible function is a curve that eventually bends away from all such lines. Read the picture as a race to the bottom. The two blue lines are non-negligible reference functions – they decay, but only at a polynomial rate. Each warm curve is negligible, and each eventually undercuts every blue line.",
+     "svg": "prework/figures/w3-fig1.svg"
+    },
+    {
+     "kind": "item",
+     "id": "3/reading-1",
+     "env": "reading",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about negligible functions and probabilities in:"
+      },
+      {
+       "kind": "para",
+       "text": "Mike Rosulek - The Joy of Cryptography - pages 67-71."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "In Reading 1, we encountered the following two equivalent definitions of what it means for a function, $f$, to be negligible:"
+    },
+    {
+     "kind": "list",
+     "ordered": false,
+     "items": [
+      [
+       {
+        "kind": "para",
+        "text": "For all polynomials, $p$, $\\lim_{\\lambda\\to\\infty}p(\\lambda)\\cdot f(\\lambda) = 0$."
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "For all natural numbers, $c$, $\\lim_{\\lambda\\to\\infty}\\lambda^c\\cdot f(\\lambda) = 0$."
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "The following are three additional equivalent definitions:"
+    },
+    {
+     "kind": "list",
+     "ordered": false,
+     "items": [
+      [
+       {
+        "kind": "para",
+        "text": "For all polynomials, $p$, here exists a natural number, $N$, such that for all $\\lambda>N$, $\\verts{f(\\lambda)}\\leq \\frac{1}{\\verts{p(\\lambda)}}$."
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "For all polynomials, $p$, here exists a natural number, $N$, such that for all $\\lambda>N$, $\\frac{1}{\\verts{f(\\lambda)}}\\geq \\verts{p(\\lambda)}$."
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "For all natural numbers, $c$, here exists a natural number, $N$, such that for all $\\lambda>N$, $\\frac{1}{\\verts{f(\\lambda)}}\\geq \\verts{\\lambda^c}$."
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "All three of these statements are more-or-less equivalent to the statement that $f$ grows smaller faster than the reciprocal of any polynomial, or equivalently that the reciprocal of $f$ grows larger faster than any polynomial. From this perspective, I hope that it is clear that the first two definitions from the reading are also capturing this idea. With this intuition in mind,"
+    },
+    {
+     "kind": "item",
+     "id": "3/exercise-1",
+     "env": "exercise",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Prove that a function, $f$ satisfying any one of the above properties satisfies all of the above properties. (Some of you may prefer to do some or all of Exercise 2 before Exercise 1, which is totally fine)."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "You may now use any of these definitions interchangeably as it suits you."
+    },
+    {
+     "kind": "item",
+     "id": "3/exercise-2",
+     "env": "exercise",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "The final page of Reading 1 has exercises demonstrating properties of negligible functions. Complete Exercises 4.2, 4.3(a), 4.3(b), 4.4 and 4.5."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "3/exercise-3",
+     "env": "exercise",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Now that we have some more comfort with the formal definition of negligible, double-check, for rigor, your solutions to Exercises 4 from 2a and 8 from last week (2b)."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "One last note on our formal model for cryptographic security proofs is the type of adversaries we allow. Namely, we do not allow the adversary to be an arbitrary program, but rather we require it to be a Probabalistic Polynomial Time (PPT) program. By “Probabalistic,” we mean that the adversary is allowed to use randomness, such as internal coin flips. By “Polynomial Time,” we mean that the number of steps in any execution of $\\adv$ must be bounded by some polynomial, $p(\\lambda)$. This assumption is not only sensical and practical, but it is also necessary for our definition of negligible to work because it ensures that our adversary cannot turn a negligible success probability into a non-negligible one by brute force (for example, the adversary may not sample a non-negligible proportion of all possible private keys)."
+    },
+    {
+     "kind": "para",
+     "text": "Let us now begin our study of Schnorr signatures, beginning with the definition of security of a signature scheme: (keep in mind that an “oracle” in cryptography is simply a program that all other programs have access to as an interface that takes an input and returns an output, but no party has access to any information about the source code of this program beyond the specification; also note that a PPT adversary can make at most a polynomial-bounded number of queries to any oracle)"
+    },
+    {
+     "kind": "item",
+     "id": "3/reading-2",
+     "env": "reading",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about the definition of Existentially UnForgable under Chosen Message Attack (EUF-CMA) in:"
+      },
+      {
+       "kind": "para",
+       "text": "Jonathan Katz and Yehuda Lindell - Introduction to Modern Cryptography - pages 463-468."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Note that when Katz and Lindell refer to $n$, they are talking about the security parameter, which we have been calling $\\lambda$."
+    },
+    {
+     "kind": "para",
+     "text": "Before practicing with this definition, let us restate the book's definition in the attack-game notation we used last week, and then work through two examples — one proving a scheme secure and one breaking a scheme — since the exercise below will ask you to do both."
+    },
+    {
+     "kind": "para",
+     "text": "A (digital) signature scheme is a triple of PPT algorithms $(G, S, V)$: the key generation algorithm $G(\\lambda)$ outputs a key pair $(pk, sk)$; the signing algorithm $S(sk, m)$ outputs a signature $\\sigma$ on a message $m$; and the (deterministic) verification algorithm $V(pk, m, \\sigma)$ outputs true or false. We require correctness: an honestly produced signature always verifies. The EUF-CMA attack game from the reading can then be written as the game $\\game{\\algo{EUF\\text{-}CMA}}{}$ in Figure 2. The adversary is given the public key and access to a signing oracle $\\oracle{Sign}$ (modeling the “chosen message attack”), and it wins if it can produce a valid signature on <em>any</em> message it did not already ask the oracle to sign (modeling “existential forgery”). The set $Q$ simply records every message the adversary has queried, so that the final check $m^*\\notin Q$ enforces that the forgery is on a fresh message."
+    },
+    {
+     "kind": "figure",
+     "id": "3/figure-2",
+     "number": 2,
+     "caption": "The EUF-CMA attack game for a signature scheme $(G,S,V)$. The adversary $\\adv$ has oracle access to $\\oracle{Sign}$, which signs any requested message and records it in $Q$; $\\adv$ wins by outputting a valid signature on a message it never sent to $\\oracle{Sign}$.",
+     "pseudocode": {
+      "id": "3/figure-2",
+      "caption": "The EUF-CMA attack game for a signature scheme $(G,S,V)$. The adversary $\\adv$ has oracle access to $\\oracle{Sign}$, which signs any requested message and records it in $Q$; $\\adv$ wins by outputting a valid signature on a message it never sent to $\\oracle{Sign}$.",
+      "layout": "hstack",
+      "procedures": [
+       {
+        "title": "$\\game{\\algo{EUF\\text{-}CMA}}{}$",
+        "lines": [
+         {
+          "code": "Q \\gets \\emptyset"
+         },
+         {
+          "code": "(pk, sk) \\gets G(\\lambda)"
+         },
+         {
+          "code": "(m^*, \\sigma^*) \\gets \\adv^{\\oracle{Sign}}(pk)"
+         },
+         {
+          "code": "\\pcreturn V(pk, m^*, \\sigma^*) \\land m^*\\notin Q"
+         }
+        ]
+       },
+       {
+        "title": "$\\oracle{Sign}(m)$",
+        "lines": [
+         {
+          "code": "Q \\gets Q\\cup\\{m\\}"
+         },
+         {
+          "code": "\\pcreturn S(sk, m)"
+         }
+        ]
+       }
+      ]
+     }
+    },
+    {
+     "kind": "para",
+     "text": "As usual, we define the advantage of an adversary to be its probability of winning, $$\\advantage{EUF\\text{-}CMA}{\\adv} := \\pr{\\game{\\algo{EUF\\text{-}CMA}}{} = \\text{true}},$$ and we say that the signature scheme $(G, S, V)$ is secure (i.e., EUF-CMA secure) if $\\advantage{EUF\\text{-}CMA}{\\adv}$ is negligible for every PPT adversary $\\adv$. Notice that, unlike the distinguishing games from last week, here there is no “$-\\frac{1}{2}$”: a forger does not get to win half the time by guessing, since blindly outputting a signature on a fresh message succeeds only with negligible probability against a secure scheme."
+    },
+    {
+     "kind": "para",
+     "text": "<strong>Example: proving security by reduction.</strong> Suppose $(G, S, V)$ is an EUF-CMA secure signature scheme with message space $\\{0,1\\}^\\lambda$. Consider the new scheme $(G, S', V')$ with message space $\\{0,1\\}^{\\lambda-1}$ that signs a message after prepending a fixed $0$ bit: $$S'(sk, m) = S(sk, 0\\,\\|\\,m), \\qquad V'(pk, m, \\sigma) = V(pk, 0\\,\\|\\,m, \\sigma),$$ where $\\|$ denotes concatenation and key generation is unchanged. Intuitively, one would assume that $(G, S', V')$ is also EUF-CMA secure since adding this zero bit is inconsequential, but there are many situations in cryptography when seemingly inconsequential alterations do break the security of a protocol. As such, we will rigorously prove that this modification is secure if you started with a secure signature scheme, and of course we will prove this by reduction."
+    },
+    {
+     "kind": "para",
+     "text": "Following the recipe from Week 2a, the implication we want is “($(G,S,V)$ is secure) $\\Rightarrow$ ($(G,S',V')$ is secure),” so we prove its contrapositive: we assume a PPT adversary $\\adv$ that forges against $(G,S',V')$ with non-negligible advantage, and we build a PPT adversary $\\adv'$ that forges against $(G,S,V)$ with non-negligible advantage. Our “magic box” is $\\adv$; the new wrinkle, compared to the reductions of Week 2a, is that $\\adv$ expects to interact with a signing oracle, so $\\adv'$ must <em>simulate that oracle</em> for $\\adv$."
+    },
+    {
+     "kind": "para",
+     "text": "The reduction $\\adv'$ is given $pk$ and access to the signing oracle $\\oracle{Sign}(\\cdot) = S(sk, \\cdot)$ for the base scheme, and works as follows (see Figure 3 for the corresponding box-within-a-box diagram)."
+    },
+    {
+     "kind": "list",
+     "ordered": true,
+     "marker": "(1)",
+     "items": [
+      [
+       {
+        "kind": "para",
+        "text": "Run $\\adv(pk)$."
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "Whenever $\\adv$ queries its signing oracle on a message $m \\in \\{0,1\\}^{\\lambda-1}$, answer it by querying our own oracle on $0\\,\\|\\,m$ and returning the result $S(sk, 0\\,\\|\\,m)$. Since this equals $S'(sk, m)$, from $\\adv$'s point of view it is talking to a genuine $(G,S',V')$ signing oracle."
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "When $\\adv$ outputs a forgery $(m^*, \\sigma^*)$, output $(0\\,\\|\\,m^*, \\sigma^*)$."
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "figure",
+     "id": "3/figure-3",
+     "number": 3,
+     "caption": "The security reduction drawn in the standard “box-within-a-box” style.",
+     "svg": "prework/figures/w3-fig3.svg"
+    },
+    {
+     "kind": "para",
+     "text": "Now we check that $\\adv'$ wins its game exactly when $\\adv$ wins. First, whenever $\\adv$'s forgery verifies, so does ours, because $V'(pk, m^*, \\sigma^*) = V(pk, 0\\,\\|\\,m^*, \\sigma^*)$ by definition. Second, we must confirm the forgery is on a fresh message, i.e., that $0\\,\\|\\,m^*$ was never sent to our own oracle. The only messages we ever sent to our oracle were of the form $0\\,\\|\\,m$ for messages $m$ that $\\adv$ queried, and $\\adv$ winning means $m^*$ differs from all of those $m$; hence $0\\,\\|\\,m^*$ differs from every message we queried, so it is fresh. Therefore $\\adv'$ wins precisely when $\\adv$ does, giving $\\advantage{EUF\\text{-}CMA}{\\adv'} = \\advantage{EUF\\text{-}CMA}{\\adv}$, which is non-negligible. Finally, $\\adv'$ is PPT because it just runs $\\adv$ (which is PPT) plus one extra bit of bookkeeping per oracle query. This contradicts the assumed security of $(G,S,V)$, completing the reduction."
+    },
+    {
+     "kind": "para",
+     "text": "It is worth naming the moving parts, since every EUF-CMA security proof you write will have them: (i) identify which scheme's security is the assumption and which is the conclusion; (ii) use the forger for the conclusion-scheme as a subroutine; (iii) <em>simulate its signing oracle</em> using your own oracle; (iv) <em>translate its forgery</em> into a forgery for your scheme; and (v) verify that your translated forgery is both valid <em>and</em> on a message you never queried."
+    },
+    {
+     "kind": "para",
+     "text": "<strong>Example: breaking a scheme.</strong> Not every transformation preserves security, and showing that a scheme is <em>insecure</em> is usually easier: we only have to exhibit a single PPT adversary with non-negligible advantage. Consider the scheme $(G, S', V')$ on message space $\\{0,1\\}^\\lambda$ (with $\\lambda \\ge 2$) that signs the message after <em>deleting its last bit</em>: writing $m = b_1 b_2\\cdots b_\\lambda$, $$S'(sk, m) = S(sk, b_1\\cdots b_{\\lambda-1}), \\qquad V'(pk, m, \\sigma) = V(pk, b_1\\cdots b_{\\lambda-1}, \\sigma).$$ The problem is that any two messages differing only in their last bit receive the very same signature, which lets us forge after a single query (see Figure 4):"
+    },
+    {
+     "kind": "list",
+     "ordered": true,
+     "marker": "(1)",
+     "items": [
+      [
+       {
+        "kind": "para",
+        "text": "Query the signing oracle on $m = 0^\\lambda$ (the all-zeros message), receiving $\\sigma = S'(sk, 0^\\lambda) = S(sk, 0^{\\lambda-1})$."
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "Output the forgery $(m^*, \\sigma^*) = (0^{\\lambda-1}1,\\ \\sigma)$."
+       }
+      ]
+     ]
+    },
+    {
+     "kind": "figure",
+     "id": "3/figure-4",
+     "number": 4,
+     "caption": "The forgery attack of the previous example. Unlike Figure 3, this is not a reduction: the attacker $\\adv$ is a single program playing the EUF-CMA game directly against the modified scheme $(G,S',V')$, whose signing oracle and verifier both drop the last bit of a message.",
+     "svg": "prework/figures/w3-fig4.svg"
+    },
+    {
+     "kind": "para",
+     "text": "The message $m^* = 0^{\\lambda-1}1$ was never queried (it differs from $0^\\lambda$ in the last bit), so it is fresh, yet $V'(pk, m^*, \\sigma) = V(pk, 0^{\\lambda-1}, \\sigma) = \\text{true}$ because $\\sigma$ is a genuine base-scheme signature on $0^{\\lambda-1}$. This adversary wins with probability $1$, so $\\advantage{EUF\\text{-}CMA}{\\adv} = 1$, which is certainly not negligible, and hence $(G, S', V')$ is not EUF-CMA secure. Notice the shape of an attack: choose specific oracle queries, output a specific forgery, and argue both that it verifies and that its message is fresh."
+    },
+    {
+     "kind": "para",
+     "text": "Now you are ready to try both directions yourself."
+    },
+    {
+     "kind": "item",
+     "id": "3/exercise-4",
+     "env": "exercise",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Let $(G, S, V)$ be a secure signature scheme with the message space $\\{0,1\\}^\\lambda$. Let $\\hat{G}$ be a new key generation function that simply calls $G$ twice and returns a pair of secret keys, $(sk_0, sk_1)$, and the corresponding pair of public keys, $(pk_0, pk_1)$. Which of the following signature schemes, $(\\hat{G}, \\hat{S}, \\hat{V})$, are secure? Show an attack or prove security (by reduction)."
+      },
+      {
+       "kind": "list",
+       "ordered": true,
+       "marker": "(a)",
+       "items": [
+        [
+         {
+          "kind": "para",
+          "text": "Prove that “Sign halves” is <strong>not</strong> secure: $$\\hat{S}((sk_0, sk_1), (m_L, m_R)) = (S(sk_0, m_L), S(sk_1, m_R)),$$ $$\\hat{V}((pk_0, pk_1), (m_L, m_R), (\\sigma_0, \\sigma_1)) = V(pk_0, m_L, \\sigma_0)\\wedge V(pk_1, m_R, \\sigma_1).$$"
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "Show that “Sign with randomness” is <strong>not</strong> secure: $$\\hat{S}(sk_0, m) = [\\text{choose random }r\\in\\{0,1\\}^\\lambda; \\text{output }(r, S(sk_0, m\\oplus r), S(sk_0, r))],$$ $$\\hat{V}(pk_0, m, (r, \\sigma_0, \\sigma_1)) = V(pk_0, m\\oplus r, \\sigma_0)\\wedge V(pk_0, r, \\sigma_1).$$"
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "Prove that “Accept one valid” is secure: $$\\hat{S}((sk_0, sk_1), m) = (S(sk_0, m), S(sk_1, m)),$$ $$\\hat{V}((pk_0, pk_1), m, (\\sigma_0, \\sigma_1)) = V(pk_0, m, \\sigma_0)\\vee V(pk_1, m, \\sigma_1).$$ (Hint: Consider using that $\\pr{\\sigma_0\\text{ or }\\sigma_1\\text{ is valid}} \\leq \\pr{\\sigma_0\\text{ valid}} + \\pr{\\sigma_1\\text{ valid}}$ from Exercise 4 of last week)."
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Now we are almost ready to see the Fiat-Shamir Transform (next week), which turns secure identification protocols into secure digitial signature schemes. We will use the Fiat-Shamir Transform to prove the security of the Schnorr signature soon. The only ingredient missing is the Random Oracle Model (ROM), which is how we model our hash functions to make proofs more practical:"
+    },
+    {
+     "kind": "item",
+     "id": "3/reading-3",
+     "env": "reading",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about the Random Oracle Model in:"
+      },
+      {
+       "kind": "para",
+       "text": "Jonathan Katz and Yehuda Lindell - Introduction to Modern Cryptography - pages 187-191."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Pieter recorded the following video further discussing the ROM: <code>https://www.youtube.com/watch?v=ITxL4bOkOy0</code>"
+    },
+    {
+     "kind": "para",
+     "text": "One strange but important feature of the ROM discussed in the section “Definitions and Proofs in the ROM” is that during a reduction, adversaries $\\adv$ must “report” all of their oracle queries to the adversary $\\adv'$ that is using $\\adv$ as a subroutine, and additionally $\\adv'$ may adaptively control the response that $\\adv$ gets to these queries so long as $\\adv$ cannot distinguish what they receive from a regular random oracle. This kind of reporting feature is also key to other models we will discuss in the future."
+    },
+    {
+     "kind": "para",
+     "text": "Next week, we will use the Random Oracle Model (ROM) to construct the Fiat-Shamir transform, and then we will dive straight into proving that the Schnorr digital signature is secure!"
+    }
+   ]
+  },
+  {
+   "id": "4",
+   "title": "Week 4",
+   "date": "July 16, 2025",
+   "source": "week4/Week4.tex",
+   "pdfUrl": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week4/Week4.pdf",
+   "blocks": [
+    {
+     "kind": "para",
+     "text": "Last week we studied all of the prerequisites to prove that the Schnorr digital signature is secure in the Random Oracle Model (ROM). We will now study a proof of the security of the Schnorr digital signature, where we will first introduce the Schnorr identification protocol, which we will show is secure against impersonations if the Discrete Log Problem (DL) is hard. Then we will use the Fiat-Shamir transform to show that Schnorr signatures are secure. Next, we will continue our study of more advanced topics by giving another proof that Schnorr signatures are secure in the Algebraic Group Model (AGM). Finally, we will begin our survey of a class of Zero Knowledge Proofs that generalize the Schnorr signature known as Sigma protocols."
+    },
+    {
+     "kind": "para",
+     "text": "In the following reading, I personally think their introduction of $(I, \\text{st})$ in the definition of an identification protocol is a little bit confusing. I encourage you to think of the initial message, $I$, as the “public key”, whose “private key”, $\\text{st}$, will function as the session randomness to make sure the prover's final response doesn't leak their secret material. Additionally, I think they could mention sooner than they do that step 1 of Algorithm $\\adv'$ in the proof of Theorem 13.10 is literally just guessing which of the queries that $\\adv$ makes to the random oracle contains the message that $\\adv$ is trying to create a forgery for, and acting accordingly after making this guess. This makes it very unlikely ($\\frac{1}{q}$ chance the guess was correct) that Algorithm $\\adv'$ succeeds, even if $\\adv$ <em>always</em> succeeds. However, because there is a polynomial bound on the number of oracle queries $\\adv$ makes, even if $\\adv'$ is worse than $\\adv$ we still get that $\\adv'$ has a non-negligible success probability if $\\adv$ does ($\\frac{1}{q}$ is non-negligible)."
+    },
+    {
+     "kind": "item",
+     "id": "4/reading-1",
+     "env": "reading",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about the Fiat-Shamir Transform in:"
+      },
+      {
+       "kind": "para",
+       "text": "Jonathan Katz and Yehuda Lindell - Introduction to Modern Cryptography - Section 13.5.1."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "It is important to note in the proof of Theorem 13.10 that the “simplifying assumptions” are actually a load-bearing and important part of the actual reduction algorithm. For example, the first assumption is “that $\\adv'$ makes any given query to $H$ only once.” The justification for such an assumption is that if we had an attacker $\\bdv'$ that was allowed to query $H$ multiple times with the same input, then we could build an attacker $\\adv'$ that didn't by calling $\\bdv'$ as a subroutine and forwarding all messages to the environment and forwarding all responses back to $\\bdv'$, except that we don't forward redundant queries to $H$ and instead keep a cache of all previous queries and respond directly using the cache when possible. Thus, for any “general” attacker $\\bdv'$, there exists an attacker $\\adv'$ with equal advantage that never makes redundant calls to $H$. Assumptions such as these are usually signaled by the preceeding phrase “without loss of generality.” Thus, the complete reduction in Theorem 13.10 should be thought of as composing the algorithm $\\adv$ that they provide with various other simple wrapping reductions tied to the simplifying assumptions."
+    },
+    {
+     "kind": "item",
+     "id": "4/exercise-1",
+     "env": "exercise",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Justify all of the simplifying assumptions made at the beginning of the proof of Theorem 13.10 in the above reading."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Finally, we are ready to read a proof of the security of the Schnorr signature in the ROM! The final part of the proof where they discuss probabilities is a little bit tricky, but try to get at least a high-level understanding and we can discuss this in detail together or on the Discourse."
+    },
+    {
+     "kind": "item",
+     "id": "4/reading-2",
+     "env": "reading",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about the Schnorr signature's security in:"
+      },
+      {
+       "kind": "para",
+       "text": "Jonathan Katz and Yehuda Lindell - Introduction to Modern Cryptography - Section 13.5.2."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "I would like to clarify the second-to-last step in the string of inequalities showing that $\\pr{\\mathsf{DLog}_{\\adv', \\mathcal{G}}(n) = 1} \\geq \\delta(n)^2 - \\frac{1}{q}$; specifically, why $\\sum_\\omega \\pr{\\omega}\\cdot (\\delta_\\omega)^2\\geq \\left(\\sum_\\omega \\pr{\\omega}\\cdot \\delta_\\omega\\right)^2.$ There is a clever trick involved (that you will not be expected to be able to come up with on your own as it comes from another field)."
+    },
+    {
+     "kind": "para",
+     "text": "Define a function $f(t) := \\sum_\\omega \\pr{\\omega}\\cdot (\\delta_\\omega - t)^2$ that takes in a real number $t\\in\\mathbb{R}$ and returns a non-negative real number (since it is a sum of products of non-negative numbers). Expanding the definition of $f(t)$, we get that"
+    },
+    {
+     "kind": "para",
+     "text": "$$\\begin{aligned}f(t) &= \\sum_\\omega \\pr{\\omega}\\cdot (\\delta_\\omega - t)^2\\\\\n&= \\left(\\sum_\\omega \\pr{\\omega}\\right)\\cdot t^2 + \\left(-2\\sum_\\omega\\pr{\\omega}\\cdot\\delta_\\omega\\right)\\cdot t + \\sum_\\omega\\pr{\\omega}\\cdot(\\delta_\\omega)^2\\\\\n& = t^2 + \\left(-2\\sum_\\omega\\pr{\\omega}\\cdot\\delta_\\omega\\right)\\cdot t + \\sum_\\omega\\pr{\\omega}\\cdot(\\delta_\\omega)^2,\\end{aligned}$$"
+    },
+    {
+     "kind": "para",
+     "text": "which is a quadratic function of $t$. Recal the quadratic formula, that $$at^2 + bt + c = 0\\Rightarrow t = \\frac{-b\\pm\\sqrt{b^2 - 4ac}}{2a}.$$ If a quadratic function such as $f(t)$ is always non-negative, then this means it has either $0$ or $1$ solutions to $at^2 + bt + c = 0$, and this is equivalent to saying the statement that $b^2 - 4ac\\leq 0$ (as otherwise there would be $2$ solutions). For our quadratic function $f(t)$, this implies that"
+    },
+    {
+     "kind": "para",
+     "text": "$$\\begin{aligned}\\left(-2\\sum_\\omega\\pr{\\omega}\\cdot\\delta_\\omega\\right)^2 - 4\\sum_\\omega\\pr{\\omega}\\cdot(\\delta_\\omega)^2&\\leq 0,\\text{ and so}\\\\\n4\\left(\\sum_\\omega\\pr{\\omega}\\delta_\\omega\\right)^2&\\leq 4\\sum_\\omega\\pr{\\omega}(\\delta_\\omega)^2;\\text{ equivalently,}\\\\\n\\left(\\sum_\\omega\\pr{\\omega}\\delta_\\omega\\right)^2&\\leq \\sum_\\omega\\pr{\\omega}(\\delta_\\omega)^2.\\end{aligned}$$"
+    },
+    {
+     "kind": "para",
+     "text": "Note that we used the fact that probabilities are non-negative and add up to $1$."
+    },
+    {
+     "kind": "para",
+     "text": "Now let's work towards another proof of security for Schnorr signatures! In 2018, Fuchsbauer, Kiltz, and Loss formalized the Algebraic Group Model (AGM). In the AGM, adversaries have the restriction that every time an “algebraic adversary” outputs a group element it must also output a list of exponents that show how to compute the group element as a combination of the group elements that have been given to the adversary as inputs (or public parameters). For example, recall the Computational Diffie-Hellman (CDH) assumption that it is hard to compute $g^{xy}$ given $X = g^x$ and $Y = g^y$ as input. An algebraic adversary (i.e., adversary in the AGM) that plays the CDH attack game is given $X$ and $Y$ (as well as the generator $g$) and it must output not only a group element $Z$, but also a list $(a, b, c)$ such that $Z = g^aX^bY^c$."
+    },
+    {
+     "kind": "para",
+     "text": "Requiring adversaries to know how to construct new group elements out of previous elements rules out so-called “non-algebraic adversaries” that somehow attack by performing non-group operations on group elements. Thus, a proof of security in the AGM shows that it is not possible to succeed in an attack using an algebraic program. One benefit of the AGM is that proofs in the AGM usually avoid rewinding and forking arguments such as we saw in the proof of the Schnorr signature's security. However, since we only consider algebraic adversaries, proofs in the AGM are weaker than proofs that do not use the AGM, since they only show that there are no attacks from adversaries that handle the group and its elements algebraically and there may yet exist non-algebraic adversaries with successful attacks. Another benefit of the AGM is that many standard assumptions are equivalent to the DL assumption in the AGM. For example,"
+    },
+    {
+     "kind": "item",
+     "id": "4/exercise-2",
+     "env": "exercise",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Use proof by reduction to show that in the AGM, if the DL assumption holds for a group, then so does the CDH assumption. Recall that an adversary that succeeds in the CDH attack game in the AGM also provides a list of exponents!"
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Let us now construct an EUF-CMA security proof for Schnorr signatures in the AGM (and also still using the ROM to model our hash function as a random oracle)."
+    },
+    {
+     "kind": "item",
+     "id": "4/exercise-3",
+     "env": "exercise",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Use proof by reduction in the AGM to show that if the DL assumption holds, then the Schnorr signature is EUF-CMA secure."
+      },
+      {
+       "kind": "para",
+       "text": "Hint: Recall that our goal is to use a program $\\adv$ that plays the EUF-CMA attack game, from Reading 2 of last week, in the ROM to construct a program $\\adv'$, which takes a group element, $pk$, as input and attempts to compute a value $sk$ such that $g^{sk} = pk$. Recall that $\\adv$ takes a public key as input, then it makes some number, $q$, of signature queries for messages $m_1, \\ldots, m_q$ (whose responses are of the form $(R_i, s_i)$), then it makes some number (say $q$ again, letting $q$ be the larger of the two numbers) of hash queries for hash preimages $(\\tilde{R}_1, m_1),\\ldots, (\\tilde{R}_q, m_q)$, before it finally outputs a forgery attempt $(m, R, s)$. Note that since the $\\tilde{R}_j$ are group elements, the adversary must also output a list $(a_0, a_1, \\ldots, a_{q+1})$ such that $\\tilde{R}_j = g^{a_0}pk^{a_1}\\prod_{i=1}^qR_i^{a_{i+1}}$ because $\\adv$ has received $pk$ as input, $g$ is a public parameter, and it has also received the $R_i$ as input in return to its signature queries. Thus, in order to use $\\adv$ we must respond to its signature queires by using the simulation trick for Schnorr Identification transcripts from before, then we can respond to hash queries with random values (unless one of the $\\tilde{R}_i$ is a value we've seen before, then we have to be more careful). Finally, given the value $R$ in the forgery, we find the list $(a_0, \\ldots, a_{q+1})$ that $\\adv$ used to represent $R$ when it had made its hash oracle query and our goal is to compute a value $sk$ such that $pk = g^{sk}$ (you must use the fact that the forgery satisfies verification, and that you know values $e_i$ and $s_i$ such that $R_i = g^{s_i}pk^{-e_i}$)."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Notice that in the AGM, we did not need to use any kind of rewinding argument (that succeeding to make a forgery once with non-negligible probability implies that we can succeed twice with non-negligible probability). In particular, we have shown that being able to produce a single forgery as an algebraic adversary is enough to efficiently compute the secret key for which the forgery was produced."
+    },
+    {
+     "kind": "para",
+     "text": "We will now shift our focus back to the ROM without the AGM to study a generalization of the Schnorr identification protocol."
+    },
+    {
+     "kind": "item",
+     "id": "4/reading-3",
+     "env": "reading",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Using the Schnorr identification protocol as a mental model, read about the definition of a Sigma protocol in:"
+      },
+      {
+       "kind": "para",
+       "text": "Dan Boneh and Victor Shoup - A Graduate Course in Applied Cryptography - Section 19.4."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Note that one reason we are willing to assume that our verifier is honest, is that we will eventually be applying the Fiat-Shamir transform to replace them with a hash function, which will be honest. Let's quickly exercise these new definitions,"
+    },
+    {
+     "kind": "item",
+     "id": "4/exercise-4",
+     "env": "exercise",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Many applications of Sigma protocols require a large challenge space.This exercise shows that we can always take a Sigma protocol with a small challenge space and turn it into one with a large challenge space, essentially by parallel repetition."
+      },
+      {
+       "kind": "para",
+       "text": "Let $(P, V)$ be a Sigma protocol for a relation $\\mathcal{R}\\subseteq \\mathcal{X}\\times\\mathcal{Y}$, with challenge space $\\mathcal{C}$. Let $k$ be a positive integer. Define a new Sigma protocol $(P^k, V^k)$ as follows. Here, the prover $P^k$ takes as input $(x, y)\\in\\mathcal{R}$, the verifier $V^k$ takes as input $y\\in\\mathcal{Y}$, and the challenge space is $\\mathcal{C}^k$."
+      },
+      {
+       "kind": "list",
+       "ordered": false,
+       "items": [
+        [
+         {
+          "kind": "para",
+          "text": "$P^k$ initializes $k$ instances of $P$ on input $(x, y)$, obtaining commitments $t_1,\\ldots, t_k$, and sends these to $V^k$."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "$V^k$ chooses $(c_1,\\ldots, c_k)\\in\\mathcal{C}^k$ at random, and sends this to $P^k$."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "For $i=1,\\ldots, k$ the prover $P^k$ feeds $c_i$ into the $i$th instance of $P$, obtaining a response $z_i$. It sends $(z_1,\\ldots, z_k)$ to $V^k$."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "For $i=1,\\ldots, k$ the verifier $V^k$ verifies that $(t_i, c_i, z_i)$ is an accepting conversation for $y$."
+         }
+        ]
+       ]
+      },
+      {
+       "kind": "list",
+       "ordered": true,
+       "marker": "(a)",
+       "items": [
+        [
+         {
+          "kind": "para",
+          "text": "Show that $(P^k, V^k)$ is a Sigma protocol for $\\mathcal{R}$."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "Show that if $(P, V)$ provides special soundness, then so does $(P^k, V^k)$."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "Show that if $(P, V)$ is special HVZK, then so is $(P^k, V^k)$."
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Next week, we will see some more examples of concrete Sigma protocols, and then we will generalize the Fiat-Shamir transform to Sigma protocols by replacing our verifiers with hash functions modeled as random oracles."
+    }
+   ]
+  },
+  {
+   "id": "5",
+   "title": "Week 5",
+   "date": "July 23, 2025",
+   "source": "week5/Week5.tex",
+   "pdfUrl": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week5/Week5.pdf",
+   "blocks": [
+    {
+     "kind": "para",
+     "text": "Last week we studied two proofs of the security for the Schnorr digital signature assuming that DL is hard (one in the AGM+ROM, the other just in the ROM). We then introduced the notion of a Sigma protocol that generalizes and abstracts much of the ideas behind the Schnorr ID protocol and its Fiat-Shamir transform (the Schnorr digital signature), which we will be expanding on this week. Let's begin with some examples of Sigma protocols:"
+    },
+    {
+     "kind": "item",
+     "id": "5/reading-1",
+     "env": "reading",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about Okamoto's protocol, the Chaum-Pedersen protocol, and a Sigma protocols for arbitrary linear relations (optionally, also read about a Sigma protocol for the pre-image of a homomorphism) in:"
+      },
+      {
+       "kind": "para",
+       "text": "Dan Boneh and Victor Shoup - A Graduate Course in Applied Cryptography - Section 19.5."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Before moving on, we will quickly apply some of our new knowledge to a Sigma protocol relevant to Bitcoin,"
+    },
+    {
+     "kind": "item",
+     "id": "5/exercise-1",
+     "env": "exercise",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Proofs of Discrete Log Equality, also referred to as PoDLEs (pronounced poodles) or DLEQ proofs, are a Sigma protocol where the verifier has is given four group elements, $g$, $h$, $A$, and $B$, and the prover shows that they know a single value $a$ such that $A = g^a$ and $B = h^a$. In other words, they prove that the elements $A$ and $B$ have the same discrete log subject to different bases/generators ($g$ and $h$). Propose a Sigma protocol for this relation."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Time to replace our verifiers with hash functions modeled as random oracles."
+    },
+    {
+     "kind": "item",
+     "id": "5/reading-2",
+     "env": "reading",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Using the Schnorr signature as a mental model, read about the Fiat-Shamir transform for Sigma protocols in:"
+      },
+      {
+       "kind": "para",
+       "text": "Dan Boneh and Victor Shoup - A Graduate Course in Applied Cryptography - Section 19.6."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "5/exercise-2",
+     "env": "exercise",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Use the Fiat-Shamir transform applied to your solution for Exercise 1 to create a non-interactive DLEQ proof algorithm. Compare your proposal to BIP 374."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "5/exercise-3",
+     "env": "exercise",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Suppose you have a Sigma protocol, $(P, V)$, that is special HVZK. Show that the signature scheme resulting from the variant of the Fiat-Shamir transform where we set the challenge to be $c = H(m)$ instead of $c = H(R, m)$ is insecure."
+      },
+      {
+       "kind": "para",
+       "text": "(Hint: You have access to a HVZK simulator)."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "5/reading-3",
+     "env": "reading",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about combining Sigma protocols in:"
+      },
+      {
+       "kind": "para",
+       "text": "Dan Boneh and Victor Shoup - A Graduate Course in Applied Cryptography - Section 19.7."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "5/exercise-4",
+     "env": "exercise",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Generalize the AND-proof and OR-proof constructions in the previous reading from two Sigma protocols to $n$ Sigma protocols (where $n\\geq 2$ is a constant number). State the relations for your new Sigma protocols, and argue that they provide special soundness and are special HVZK under appropriate assumptions. The computational and communication complexity (but not number of rounds) of your protocols should scale linearly in $n$."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "You have now read (or read the equivalent of) the vast majority of Chapter 19 of a graduate cryptography textbook, amazing!"
+    },
+    {
+     "kind": "para",
+     "text": "To finish this week off, I will now introduce some variants of the Discrete Log problem (DL), namely the One More Discrete Log problem (OMDL) and the Algebraic One More Discrete Log problem (AOMDL)."
+    },
+    {
+     "kind": "para",
+     "text": "As Chelsea Komlo writes in her note, “Notes on Proving the Security of Single-Party Schnorr” (which I will link on Discourse), “The OMDL problem is useful for proving variants of Schnorr signature schemes when it becomes difficult for the prover to correctly program the random oracle. Such situations can occur when the adversary has more influence over the inputs that are provided to the random oracle. For example, in threshold signature schemes or blind signatures, the adversary is allowed to participate in the signing protocol, and so has some amount of influence over the value of the challenge. In this setting, proving security becomes harder because the simulator does not know the value of the challenge $c$ when it selects its commitment $R$. While OMDL allows for a useful proving mechanism in this setting, OMDL is a stronger assumption than plain dlog, which has tradeoffs when considering how realistic this assumption is in a practical setting.”"
+    },
+    {
+     "kind": "para",
+     "text": "In that same note, a summary of how OMDL is used to prove the Schnorr ID scheme from last week is secure under concurrent attacks is given, but I would like us to actually go through the source paper for our next reading:"
+    },
+    {
+     "kind": "item",
+     "id": "5/reading-4",
+     "env": "reading",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about how we can use OMDL to prove Schnorr ID secure against impersonation under concurrent attacks (IMP-CA) in the following paper, skipping the sections about GQ: Mihir Bellare and Adriana Palacio - GQ and Schnorr Identification Schemes: Proofs of Security against Impersonation under Active and Concurrent Attacks"
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Note that OMDL is not required for showing Schnorr <em>signatures</em> are secure against concurrent attacks because the Fiat-Shamir transform eliminates the interactive challenge that a concurrent attacker might take advantage of during the Schnorr <em>identification protocol</em>, which is the focus of the above reading."
+    },
+    {
+     "kind": "para",
+     "text": "A related assumption proposed by Jonas Nick, Tim Ruffing, and Yannick Seurin in the MuSig2 paper is the AOMDL assumption. As they put it, “A cryptographic assumption is algorithmically falsifiable if it can be decided in p.p.t. whether a given algorithm breaks it. While this is true for most standard assumptions such as the RSA assumption or the DL assumption, it is notably not true for the OMDL assumption, where the OMDL challenger needs to provide the adversary with a DL oracle that cannot be implemented in p.p.t. (unless the DL problem is easy, but then the OMDL assumption does not hold anyway)."
+    },
+    {
+     "kind": "para",
+     "text": "While we believe that the OMDL has withstood the test of time, it is still desirable to avoid nonfalsifiable assumptions whenever possible. We observe that the DL oracle can be in fact implemented in p.p.t. when the solving algorithm is required to be algebraic. In the context of OMDL, this translates to the requirement that whenever the adversary queries the discrete logarithm of a group element via the DL oracle, it outputs a representation of this group element in the basis formed by the generator and all DL challenges it has received thus far (which together constitute all group elements it has received thus far). As a result we obtain a falsifiable variant of the OMDL assumption that we call the algebraic OMDL (AOMDL) assumption. Since every algebraic algorithm is also a normal algorithm, the AOMDL assumption is immediately implied by the well-established OMDL assumption."
+    },
+    {
+     "kind": "para",
+     "text": "Since our reductions in both the ROM and in the AGM+ROM are algebraic in this sense, we can rely on the falsifiable AOMDL assumption. We would like to stress that being algebraic here refers to a property of the reduction, which acts as the algorithm solving (A)OMDL, and our reductions are algebraic independent of whether the unforgeability adversary, to which the reduction has access internally, is algebraic. As such, the use of the AOMDL assumption is independent and orthogonal of our use of the AGM as described in the previous subsection. In particular we can rely on the AOMDL assumption even in our ROM-only proof."
+    },
+    {
+     "kind": "para",
+     "text": "We believe that the AOMDL problem is helpful beyond the scope of this paper, as it turns out that essentially all security proofs in the literature use the OMDL problem in an algebraic and thus falsifiable fashion [e.g., BP02; NKD+03; BS07; FPS20]. We do not claim that our observation about algebraic algorithms is a deep insight—in fact implementing the DL oracle is straight-forward given an algebraic solving algorithm—we simply believe it is useful for the evaluation of security results.”"
+    },
+    {
+     "kind": "item",
+     "id": "5/exercise-5",
+     "env": "exercise",
+     "number": "5",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Justify the statement “that the DL oracle can be in fact implemented in p.p.t. when the solving algorithm is required to be algebraic.” Specifically, describe how the DL oracle should be implemented."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "5/exercise-6",
+     "env": "exercise",
+     "number": "6",
+     "body": [
+      {
+       "kind": "para",
+       "text": "The first paper cited, BP02, in the claim “as it turns out that essentially all security proofs in the literature use the OMDL problem in an algebraic and thus falsifiable fashion” is actually the paper from the previous reading! Rewrite the reduction in Figure 5 to be an AOMDL adversary instead of an OMDL adversary by providing the necessary additional coefficient data to all DL oracle invocations."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Next week we will be studying some recent papers relevant to Bitcoin!"
+    }
+   ]
+  },
+  {
+   "id": "6",
+   "title": "Week 6",
+   "date": "July 30, 2025",
+   "source": "week6/Week6.tex",
+   "pdfUrl": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week6/Week6.pdf",
+   "blocks": [
+    {
+     "kind": "para",
+     "text": "Last week we looked at some advanced topics: Sigma protocols and the OMDL and AMODL assumptions. In this week, we will review and reinforce our understanding of the Schnorr security proof, as well as practice writing security definitions for new protocols. We will also briefly introduce Schnorr multi-signatures."
+    },
+    {
+     "kind": "para",
+     "text": "Before we begin, let us take a moment to take a pass at range proofs."
+    },
+    {
+     "kind": "item",
+     "id": "6/exercise-1",
+     "env": "exercise",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Recall that for a group $\\G$ of order $p$ with generators $g$ and $h$, a Pedersen commitment to $x\\in\\Z_p$ with randomness $y\\in\\Z_p$ is of the form $C = g^xh^y$."
+      },
+      {
+       "kind": "list",
+       "ordered": true,
+       "marker": "(a)",
+       "items": [
+        [
+         {
+          "kind": "para",
+          "text": "Construct a special HVZK Sigma protocol with special soundness for the statement that a commitment value, $C$, is a Pedersen commitment for the value $x = 1$ (without revealing $y$, of course). Create this protocol by starting with the Schnorr ID protocol for $h^y$ and modifying the verification step at the end."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "Next, use the OR construction for Sigma protocols from last week to construct a special HVZK Sigma protocol with special soundness for the statement that a commitment value, C, is a Pedersen commitment for either the value $x = 0$, or the value $x = 1$ (without revealing which, of course)."
+         }
+        ],
+        [
+         {
+          "kind": "para",
+          "text": "Instead of computing $C = \\text{Commit}(x; y)$ by generating a random value of $y$ and returning $g^xh^y$, we will instead generate $n$ random values, $y_0, \\ldots, y_{n-1}$ and let $y$ be equal to $y_0 + 2y_1 + \\cdots + 2^{n-1}y_{n-1}\\bmod p$. Then, if $x$ is equal to $x_0 + 2x_1 + \\cdots + 2^{n-1}x_{n-1}$ (where the $x_i$ are $x$’s bits in binary) we get that $C = \\prod_i \\text{Commit}(x_i; y_i)^{2^i}$ and each of the $x_i$ is either equal to 0 or 1! Because our commitments are perfectly hiding, it is safe to share the values $\\text{Commit}(x_i; y_i)$."
+         },
+         {
+          "kind": "para",
+          "text": "Using your solution to the previous part, write down an explicit Sigma protocol for the statement that all of the commitments, $C_i = \\text{Commit}(x_i; y_i)$, are committed to a bit (0 or 1). Alongside the verification that $C = \\prod_i C_i^{2^i}$, this constitutes a range proof!"
+         }
+        ]
+       ]
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Moving on, as we have now seen more than a couple times, reducing the security of protocols such as Schnorr to underlying computational assumptions usually (outside of the AGM) relies on the use of “rewinding”/“forking” arguments, where an adversary is run multiple times with related inputs and a fixed source of randomness. Because of the prevalence of these kinds of arguments, security proofs can oftentimes be simplified by refactoring so that there is a single independent forking lemma beforehand, which is invoked within a security proof."
+    },
+    {
+     "kind": "para",
+     "text": "I actually chose our first Schnorr security proof to be out of the Katz and Lindell book, in part, because they do not do this. But now that we have the proper motivation,"
+    },
+    {
+     "kind": "item",
+     "id": "6/reading-1",
+     "env": "reading",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about a simple and general forking lemma in:"
+      },
+      {
+       "kind": "para",
+       "text": "Mihir Bellare and Gregory Neven - New Multi-Signature Schemes and a General Forking Lemma - Section 3. DO NOT (YET) READ SECTION 4!"
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "I recommend that, on a first reading, you should not worry too much about the details of the proof of the lemma, and instead focus primarily on understanding what the lemma is claiming."
+    },
+    {
+     "kind": "item",
+     "id": "6/exercise-2",
+     "env": "exercise",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Using the lemma from Reading 1, write up a proof in your own words that Schnorr digital signatures are secure in the Random Oracle Model if the Discrete Log problem is hard. You may refer back to the proofs in Katz and Lindell, but I would like a direct proof that does not explicitly invoke the Fiat-Shamir transform. I encourage you to use this opportunity to be very pedantic and to ensure that you are comfortable with all of the details!"
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Once you have completed, or at least nearly completed, this exercise,"
+    },
+    {
+     "kind": "item",
+     "id": "6/reading-2",
+     "env": "reading",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read the general forking lemma's author's proof of the security of the Schnorr digital signature that they used to demonstrate the use of their lemma in:"
+      },
+      {
+       "kind": "para",
+       "text": "Mihir Bellare and Gregory Neven - New Multi-Signature Schemes and a General Forking Lemma - Section 4."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "The Bellare and Neven paper of Readings 1 and 2 introduced a Schnorr-based multi-signature that was a precursor to MuSig (you can go back and read more of this paper if you wish, but it is probably not the best use of our time together)."
+    },
+    {
+     "kind": "item",
+     "id": "6/exercise-3",
+     "env": "exercise",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "In the following reading, pause on page 9 when you reach the SECURITY section, read the first paragraph of that section, and then attempt to define multi-signature scheme security against concurrent attacks using an attack game to capture the notion described in that first paragraph."
+      },
+      {
+       "kind": "para",
+       "text": "Compare your solution to the definition given in the reading."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "6/reading-3",
+     "env": "reading",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about MuSig in:"
+      },
+      {
+       "kind": "para",
+       "text": "Gregory Maxwell, Andrew Poelstra, Yannick Seurin, and Pieter Wuille - Simple Schnorr Multi-Signatures with Applications to Bitcoin."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "As before, on a first reading, I recommend that you don't get too caught up in proof details, but rather return to the proofs once you have gotten a full high-level picture of the protocol and approach."
+    }
+   ]
+  },
+  {
+   "id": "7",
+   "title": "Week 7+",
+   "date": "August 6, 2025",
+   "source": "week7/Week7.tex",
+   "pdfUrl": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week7/Week7.pdf",
+   "blocks": [
+    {
+     "kind": "para",
+     "text": "This brings us to the end of the prework!! You've done it!!!"
+    },
+    {
+     "kind": "para",
+     "text": "I will include a few more readings here that would be good to read. I also encourage everyone to take some time to review any material from previous weeks that felt unclear or unresolved. This review of past weeks is your only exercise for this week."
+    },
+    {
+     "kind": "para",
+     "text": "For the papers listed below, I don't intend to overwhelm you with a bunch of complicated readings to get through, but rather I think it would be productive for you to have some more exposure. As such, I don't expect you to go through these papers as thoroughly as in past weeks (with the exception of the first reading), and I encourage you to first read for a higher-level understanding of the general ideas without necessarily getting to bogged down in too many details (unless you'd like to)."
+    },
+    {
+     "kind": "item",
+     "id": "7/reading-1",
+     "env": "reading",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about a commonly-used method of organizing complicated security proofs based on using many indistinguishably small transitions in:"
+      },
+      {
+       "kind": "para",
+       "text": "Victor Shoup - Sequences of Games: A Tool for Taming Complexity in Security Proofs."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "7/reading-2",
+     "env": "reading",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about another commonly-used method of organizing complicated security proofs that introduces the background for the Universal Composability (UC) framework in:"
+      },
+      {
+       "kind": "para",
+       "text": "Yehuda Lindell - How To Simulate It – A Tutorial on the Simulation Proof Technique"
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "7/reading-3",
+     "env": "reading",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about MuSig2 in:"
+      },
+      {
+       "kind": "para",
+       "text": "Jonas Nick, Tim Ruffing, and Yannick Seurin - MuSig2: Simple Two-Round Schnorr Multi-Signatures."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "And lastly, I've included below some exposition on the background for Shamir secret sharing, which is the mathematical primitive underlying most threshold cryptography, after which I've included the FROST paper as a reading."
+    },
+    {
+     "kind": "para",
+     "text": "I will now provide some exposition on polynomial interpolation. All polynomials in this discussion can be thought of as having coefficients (and hence values) in $\\F_p = \\Z/p\\Z$. This is the mathematical tool underlying most distributed key generation and multi-party computation protocols. At a high level, the idea is to use the fact that a polynomial, $f(x) = y$, of degree $t-1$ is uniquely determined by any $t$ of its points so that we can build $t$-of-$n$ threshold cryptosystems using polynomials to store secrets. For example, a line (degree $1$ polynomial) is determined by any two points and a quadratic polynomial is determined by any three of its points. In this context, rather than individual parties holding entire secrets, they only hold secret shares (or shards), which are actually points on a polynomial (that is, pairs $(x, y)$ satisfying $f(x) = y$). Typically, the secret value $s$ is stored as $f(0) = s$. We can think of representing $f$ as a set of $n$ points $(x_1, y_1), \\ldots, (x_n, y_n)$ that each satisfy $f(x_i) = y_i$. If anyone knows at least $t$ of these points (where $f$ is a polynomial of degree $t-1$), then they can reconstruct all of $f$ (as we will discuss below), and in particular, they can compute $f(0) = s$."
+    },
+    {
+     "kind": "para",
+     "text": "One of the reasons to use polynomials (which is known as Shamir secret sharing) in place of, for example, just having everyone XOR secret shares together, is that if we have two shared secrets stored in $f(x) = y$ and $g(x) = y$, then we can add these two secrets together by simply adding corresponding shares together since $(f+g)(x) = f(x) + g(x)$ (where $f+g$ is itself a new polynomial). Similarly, if $c$ is some constant scalar, then $(cf)(x) = c(f(x))$ so that multiplying each share by $c$ results in multiplying the polynomial by $c$. The fact that we can perform addition and scalar multiplication by simply performing operations on secret shares implies that we can compute values such as Schnorr signatures for shared keys without needing to construct the keys!"
+    },
+    {
+     "kind": "para",
+     "text": "Polynomial interpolation is the actual process by which one computes a polynomial, $f$, of degree $t-1$ from the input data of $t$ distinct points, $\\{(x_i,y_i)\\}_{i=1}^t$ satisfying $f(x_i) = y_i$. There are multiple methods of performing interpolation, but one popular method relevant to FROST is Lagrange interpolation. The key idea of Lagrange interpolation is that, given distinct $x_1, x_2,\\ldots, x_t$, the polynomial, $$L_j(x) = \\frac{(x-x_1)(x-x_2)\\cdots(x-x_{j-1})(x-x_{j+1})\\cdots(x-x_t)}{(x_j-x_1)(x_j-x_2)\\cdots(x_j-x_{j-1})(x_j-x_{j+1})\\cdots(x_j-x_t)} = \\prod_{i\\neq j}\\frac{x-x_i}{x_j - x_i},$$ has the special property that $L_j(x_i)$ is equal to $0$ if $i\\neq j$ and is equal to $1$ if $i = j$. Additionally, $L_j(x)$ is a degree $t-1$ polynomial. Therefore, if I wish to build a polynomial that agrees with $f$ on $t$ given points, I can simply take $$L(x) = y_1L_1(x) + y_2L_2(x) + \\cdots + y_tL_t(x) = \\sum_{j=1}^ty_tL_t(x) = \\sum_{j=1}^t\\prod_{i\\neq j}y_j\\frac{x-x_i}{x_j-x_i}.$$ This degree $t-1$ polynomial has the property that $L(x_i) = y_i$ for all $i\\in\\{1,\\ldots, t\\}$!"
+    },
+    {
+     "kind": "para",
+     "text": "Now that we know how to construct a polynomial that goes through a given $t$ points, we wish to conclude that $L(x) = f(x)$, so we must show that if two degree-at-most $t-1$ polynomials agree on $t$ points, then they must be equal."
+    },
+    {
+     "kind": "item",
+     "id": "7/lemma-1",
+     "env": "lemma",
+     "number": "1",
+     "body": [
+      {
+       "kind": "para",
+       "text": "If $f$ is a non-zero polynomial such that $f(a) = 0$ (in which case we call $a$ a “root” of $f$), then $f(x)$ can be written as $(x-a)\\cdot g(x)$ for some polynomial $g(x)$ of degree one less than $f$."
+      }
+     ]
+    },
+    {
+     "kind": "proof",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Expand $f(x+a)$ until it is of the form $c_0 + c_1x + c_2x^2 + \\cdots + c_{t-1}x^{t-1}$. Since $f(0+a) = f(a) = 0$, we have that $c_0 = c_0 + c_10 + c_20^2 + \\cdots + c_{t-1}0^{t-1} = 0$. Therefore, $f(x+a) = c_1x + c_2x^2 + \\cdots + c_{t-1}x^{t-1} = x(c_1 + c_2x + \\cdots + c_{t-1}x^{t-2})$, and finally by a change of variables, $f(x) = (x-a)(c_1 + c_2(x-a) + \\cdots + c_{t-1}(x-a)^{t-2})$."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "7/lemma-2",
+     "env": "lemma",
+     "number": "2",
+     "body": [
+      {
+       "kind": "para",
+       "text": "If $f(x)$ is a non-zero degree $t-1$ polynomial, it has at most $t-1$ roots."
+      }
+     ]
+    },
+    {
+     "kind": "proof",
+     "body": [
+      {
+       "kind": "para",
+       "text": "We prove this lemma by induction on $t$. When $t=1$ or $t=2$, the result is clear. Now suppose $f$ has degree $t$ and the result holds for all polynomials of degree less than $t$. If $f$ has no roots then the result is true. If $a$ is a root of $f$, then $f(x) = (x-a)g(x)$ for some polynomial $g(x)$ of degree $t-1$. Therefore, by our inductive hypothesis, $g(x)$ has at most $t-1$ roots so that $f(x)$ has at most $t$ roots, as desired."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "7/thm-3",
+     "env": "thm",
+     "number": "3",
+     "body": [
+      {
+       "kind": "para",
+       "text": "If $L(x)$ and $f(x)$ are two polynomials of degree $t-1$ that agree on $t$ distinct values, then $L(x) = f(x)$."
+      }
+     ]
+    },
+    {
+     "kind": "proof",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Consider they polynomial $(L-f)(x) = L(x) - f(x)$, which is of degree at most $t-1$. This polynomial must have at least $t$ distinct roots, because if $L(x_i) = f(x_i)$, then $(L-f)(x_i) = 0$! Therefore, by the previous lemma, $(L-f)(x)$ must be the zero polynomial, so that $(L-f)(x) = L(x) - f(x) = 0\\Leftrightarrow L(x) = f(x)$."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "At a high level, this theorem is true because Lemma 1 shows us that polynomials can be factored as a product of $(x-a)$'s such that $f(a) = 0$, potentially ending with a factor that has no roots. Thus, a polynomial of degree $t-1$ is determined by any $t$ of its values because the difference of any two polynomials of degree $t-1$ that share $t$ values must be $0$ as it cannot be the product of $t$ linear factors (because the degree is bound by $t-1$)."
+    },
+    {
+     "kind": "para",
+     "text": "With this background in mind, we can now read about Pedersen's DKG protocol, wherein $n$ parties can construct a random polynomial known to none of them individually, but where each party knows a point on this polynomial. Subsequently, we can read the FROST paper, which uses this DKG as well as some other Lagrange interpolation tricks to achieve threshold Schnorr digital signatures."
+    },
+    {
+     "kind": "item",
+     "id": "7/reading-4",
+     "env": "reading",
+     "number": "4",
+     "body": [
+      {
+       "kind": "para",
+       "text": "In preparation for reading about FROST, read about Pedersen's trustless distributed key generation protocol in the extended abstract of:"
+      },
+      {
+       "kind": "para",
+       "text": "Torben Pedersen - A Threshold Cryptosystem without a Trusted Party."
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "7/reading-5",
+     "env": "reading",
+     "number": "5",
+     "body": [
+      {
+       "kind": "para",
+       "text": "Read about FROST in:"
+      },
+      {
+       "kind": "para",
+       "text": "Chelsea Komlo and Ian Goldberg - FROST: Flexible Round-Optimized Schnorr Threshold Signatures."
+      }
+     ]
+    },
+    {
+     "kind": "para",
+     "text": "Some additional interesting but super optional reading includes (you can find these through searching the web or asking me for pdfs)"
+    },
+    {
+     "kind": "list",
+     "ordered": false,
+     "items": [
+      [
+       {
+        "kind": "para",
+        "text": "Simple Three-Round Multiparty Schnorr Signing with Full Simulatability - Yehuda Lindell"
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "Optimizing and Implementing Fischlin's Transform for UC-Secure Zero Knowledge - Yi-Hsiu Chen and Yehuda Lindell"
+       }
+      ],
+      [
+       {
+        "kind": "para",
+        "text": "Fully Adaptive FROST in the Algebraic Group Model From Falsifiable Assumptions - Ruben Baecker, Paul Gerhart, Davide Li Calsi, Luigi Russo, Dominique Shröder, Arkady Yerukhimovich"
+       }
+      ]
+     ]
+    }
+   ]
+  }
+ ],
+ "items": [
+  {
+   "id": "1/reading-1",
+   "week": "1",
+   "env": "reading",
+   "number": "1",
+   "note": "Background (Optional)",
+   "gist": "As needed, read about sets, set notations, functions and function notations in: Herstein - Abstract Algebra - pages 3-13.",
+   "sources": [
+    {
+     "file": "Reading1.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week1/readings/Reading1.pdf"
+    }
+   ]
+  },
+  {
+   "id": "1/reading-2",
+   "week": "1",
+   "env": "reading",
+   "number": "2",
+   "gist": "Read about modular arithmetic and fast modular exponentiation in: Hoffstein, Pipher, Silverman - An Introduction to Mathematical Cryptography - pages 19-22, 24-26.",
+   "sources": [
+    {
+     "file": "Reading2.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week1/readings/Reading2.pdf"
+    }
+   ]
+  },
+  {
+   "id": "1/exercise-1",
+   "week": "1",
+   "env": "exercise",
+   "number": "1",
+   "gist": "Implement the fast exponentiation algorithm in the language of your choice. This will allow us to compute public keys, and will also be useful in future exercises."
+  },
+  {
+   "id": "1/reading-3",
+   "week": "1",
+   "env": "reading",
+   "number": "3",
+   "note": "Optional Extra Background",
+   "gist": "Read about prime factorization, the Euclidean algorithm, and Bézout's identity in either of the following: Hamkins - Proof and the Art of Mathematics - pages 15-21. Hoffstein, Pipher, Silverman - An Introduction to…",
+   "sources": [
+    {
+     "file": "Reading3a.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week1/readings/Reading3a.pdf"
+    },
+    {
+     "file": "Reading3b.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week1/readings/Reading3b.pdf"
+    }
+   ]
+  },
+  {
+   "id": "1/exercise-2",
+   "week": "1",
+   "env": "exercise",
+   "number": "2",
+   "gist": "Find at least one proof of Fermat’s little theorem online that you find convincing (there are many arguments out there). Be prepared to share! (For those feeling they have little background in math and are daunted, I…"
+  },
+  {
+   "id": "1/exercise-3",
+   "week": "1",
+   "env": "exercise",
+   "number": "3",
+   "gist": "Use Fermat’s little theorem and fast modular exponentiation to come up with an alternative algorithm for computing the multiplicative inverse of an element in $\\Z_p^*$. Implement this algorithm in the language of…"
+  },
+  {
+   "id": "1/reading-4",
+   "week": "1",
+   "env": "reading",
+   "number": "4",
+   "gist": "Read about symmetric ciphers, encoding messages, and asymmetric ciphers in: Hoffstein, Pipher, Silverman - An Introduction to Mathematical Cryptography - pages 36-47.",
+   "sources": [
+    {
+     "file": "Reading4.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week1/readings/Reading4.pdf"
+    }
+   ]
+  },
+  {
+   "id": "1/reading-5",
+   "week": "1",
+   "env": "reading",
+   "number": "5",
+   "gist": "Read about one-way functions, the discrete log problem for $\\Z_p^*$, the Diffie-Hellman key exchange, the ElGamal cipher, and abelian groups in: Hoffstein, Pipher, Silverman - An Introduction to Mathematical…",
+   "sources": [
+    {
+     "file": "Reading5.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week1/readings/Reading5.pdf"
+    }
+   ]
+  },
+  {
+   "id": "1/exercise-4",
+   "week": "1",
+   "env": "exercise",
+   "number": "4",
+   "gist": "Implement ElGamal for $\\Z_p^*$ in the language of your choice."
+  },
+  {
+   "id": "1/exercise-5",
+   "week": "1",
+   "env": "exercise",
+   "number": "5",
+   "gist": "Once you have completed Exercise 4, describe how ElGamal can be implemented using an arbitrary abelian group. Don't forget to mention how public keys are computed. Explain why using $\\Z_p$ with the operation of…"
+  },
+  {
+   "id": "1/reading-6",
+   "week": "1",
+   "env": "reading",
+   "number": "6",
+   "note": "Optional Extension",
+   "gist": "Read about the group of points on an Elliptic Curve in: Hoffstein, Pipher, Silverman - An Introduction to Mathematical Cryptography - pages 279-289.",
+   "sources": [
+    {
+     "file": "Reading6.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week1/readings/Reading6.pdf"
+    }
+   ]
+  },
+  {
+   "id": "2a/exercise-1",
+   "week": "2a",
+   "env": "exercise",
+   "number": "1",
+   "gist": "Warm-up. Let $n$ be a whole number. Using proof by contrapositive, show that if $n^2$ is a multiple of $3$, then $n$ is a multiple of $3$. State clearly what $P$ and $Q$ are, what their negations are, and where in…"
+  },
+  {
+   "id": "2a/exercise-2",
+   "week": "2a",
+   "env": "exercise",
+   "number": "2",
+   "gist": "Warm-up reduction. Recall the Diffie-Hellman setup, where two parties have public keys $X = g^x$ and $Y = g^y$ and their shared secret is $Z = g^{x\\cdot y}$. Suppose someone hands you an efficient “magic box” that…"
+  },
+  {
+   "id": "2a/exercise-3",
+   "week": "2a",
+   "env": "exercise",
+   "number": "3",
+   "gist": "Let $\\G$ be an abelian group with an element, $g\\in\\G$, of prime order $n$. A Schnorr signature of a message, $m$, by a private key, $x\\in\\Z/n\\Z$, is a pair $(R, s)$ such that $s = k + H(R, m)\\cdot x\\in \\Z/n\\Z$ and…"
+  },
+  {
+   "id": "2a/exercise-4",
+   "week": "2a",
+   "env": "exercise",
+   "number": "4",
+   "gist": "Use proof by reduction and the definitions above to informally show that If the DDH assumption holds, then the CDH assumption holds. If the CDH assumption holds, then the DL assumption holds. In order to solve this…"
+  },
+  {
+   "id": "2b/exercise-1",
+   "week": "2b",
+   "env": "exercise",
+   "number": "1",
+   "gist": "Warm-up. A single key $k$ is drawn uniformly at random from $\\{0,1\\}^3$ (so $\\Omega$ has $8$ states, each of probability $\\frac{1}{8}$). Using only the three rules above, compute: (a) the probability that $k$ starts…"
+  },
+  {
+   "id": "2b/exercise-2",
+   "week": "2b",
+   "env": "exercise",
+   "number": "2",
+   "gist": "Suppose there is a room with $30$ people, and assume that the probabilities of all assignments of one of the $365$ possible birthdays to each of the $30$ people are equal (this is of course not true, but assuming a…"
+  },
+  {
+   "id": "2b/reading-1",
+   "week": "2b",
+   "env": "reading",
+   "number": "1",
+   "note": "Optional",
+   "gist": "If you find yourself wanting more probability practice, read about the axioms of probability and conditional probability in: Ross - First Course in Probability (5th ed.) - pages 25-39, 67-89.",
+   "sources": [
+    {
+     "file": "Selections from A First Course in Probability.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week2/readings/Selections%20from%20A%20First%20Course%20in%20Probability.pdf"
+    }
+   ]
+  },
+  {
+   "id": "2b/exercise-3",
+   "week": "2b",
+   "env": "exercise",
+   "number": "3",
+   "gist": "Explain why the following is true using the definition of probability: $$\\pr{\\bigcup_{i=1}^n E_i}\\leq \\sum_{i=1}^n\\pr{E_i}.$$ When are these two values equal? (Hint: first try the case where $n=2$). In case this…"
+  },
+  {
+   "id": "2b/exercise-4",
+   "week": "2b",
+   "env": "exercise",
+   "number": "4",
+   "gist": "Warm-up for the law of total probability. A fair coin is flipped. If it comes up heads, you roll a $6$-sided die; if it comes up tails, you roll a $4$-sided die (with faces $1,2,3,4$). Let $E$ be the event that the…"
+  },
+  {
+   "id": "2b/exercise-5",
+   "week": "2b",
+   "env": "exercise",
+   "number": "5",
+   "gist": "Using the definitions above, show that two events, $E_1$ and $E_2$, are independent if and only if $P(E_1\\cap E_2) = P(E_1)\\cdot P(E_2)$. This is the usual textbook definition of independent events, but it sometimes…"
+  },
+  {
+   "id": "2b/exercise-6",
+   "week": "2b",
+   "env": "exercise",
+   "number": "6",
+   "note": "Simple but hard",
+   "gist": "We now have all of the tools we need to prove that the one-time pad is secure! Let us begin with the example of the single-bit encryption case (where $\\lambda = 1$). Show that for all adversary programs, $\\adv$, it…"
+  },
+  {
+   "id": "2b/exercise-7",
+   "week": "2b",
+   "env": "exercise",
+   "number": "7",
+   "gist": "Using the security definitions we have seen so far as a model, define an attack game that calls on an adversary to distinguish between an output of $G$ and a truly random element. Define the advantage an adversary…"
+  },
+  {
+   "id": "2b/exercise-8",
+   "week": "2b",
+   "env": "exercise",
+   "number": "8",
+   "gist": "Using the definition of a secure cipher given in Figure 1, and your definition of a secure PRG from the previous exercise, use proof by reduction (the technique from Week 2a) to show that if $G$ is a secure PRG, then…"
+  },
+  {
+   "id": "3/reading-1",
+   "week": "3",
+   "env": "reading",
+   "number": "1",
+   "gist": "Read about negligible functions and probabilities in: Mike Rosulek - The Joy of Cryptography - pages 67-71.",
+   "sources": [
+    {
+     "file": "Negligible Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week3/readings/Negligible%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "3/exercise-1",
+   "week": "3",
+   "env": "exercise",
+   "number": "1",
+   "gist": "Prove that a function, $f$ satisfying any one of the above properties satisfies all of the above properties. (Some of you may prefer to do some or all of Exercise 2 before Exercise 1, which is totally fine)."
+  },
+  {
+   "id": "3/exercise-2",
+   "week": "3",
+   "env": "exercise",
+   "number": "2",
+   "gist": "The final page of Reading 1 has exercises demonstrating properties of negligible functions. Complete Exercises 4.2, 4.3(a), 4.3(b), 4.4 and 4.5."
+  },
+  {
+   "id": "3/exercise-3",
+   "week": "3",
+   "env": "exercise",
+   "number": "3",
+   "gist": "Now that we have some more comfort with the formal definition of negligible, double-check, for rigor, your solutions to Exercises 4 from 2a and 8 from last week (2b)."
+  },
+  {
+   "id": "3/reading-2",
+   "week": "3",
+   "env": "reading",
+   "number": "2",
+   "gist": "Read about the definition of Existentially UnForgable under Chosen Message Attack (EUF-CMA) in: Jonathan Katz and Yehuda Lindell - Introduction to Modern Cryptography - pages 463-468.",
+   "sources": [
+    {
+     "file": "EUFCMA Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week3/readings/EUFCMA%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "3/exercise-4",
+   "week": "3",
+   "env": "exercise",
+   "number": "4",
+   "gist": "Let $(G, S, V)$ be a secure signature scheme with the message space $\\{0,1\\}^\\lambda$. Let $\\hat{G}$ be a new key generation function that simply calls $G$ twice and returns a pair of secret keys, $(sk_0, sk_1)$, and…"
+  },
+  {
+   "id": "3/reading-3",
+   "week": "3",
+   "env": "reading",
+   "number": "3",
+   "gist": "Read about the Random Oracle Model in: Jonathan Katz and Yehuda Lindell - Introduction to Modern Cryptography - pages 187-191.",
+   "sources": [
+    {
+     "file": "ROM Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week3/readings/ROM%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "4/reading-1",
+   "week": "4",
+   "env": "reading",
+   "number": "1",
+   "gist": "Read about the Fiat-Shamir Transform in: Jonathan Katz and Yehuda Lindell - Introduction to Modern Cryptography - Section 13.5.1.",
+   "sources": [
+    {
+     "file": "Fiat-Shamir Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week4/readings/Fiat-Shamir%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "4/exercise-1",
+   "week": "4",
+   "env": "exercise",
+   "number": "1",
+   "gist": "Justify all of the simplifying assumptions made at the beginning of the proof of Theorem 13.10 in the above reading."
+  },
+  {
+   "id": "4/reading-2",
+   "week": "4",
+   "env": "reading",
+   "number": "2",
+   "gist": "Read about the Schnorr signature's security in: Jonathan Katz and Yehuda Lindell - Introduction to Modern Cryptography - Section 13.5.2.",
+   "sources": [
+    {
+     "file": "Schnorr Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week4/readings/Schnorr%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "4/exercise-2",
+   "week": "4",
+   "env": "exercise",
+   "number": "2",
+   "gist": "Use proof by reduction to show that in the AGM, if the DL assumption holds for a group, then so does the CDH assumption. Recall that an adversary that succeeds in the CDH attack game in the AGM also provides a list…"
+  },
+  {
+   "id": "4/exercise-3",
+   "week": "4",
+   "env": "exercise",
+   "number": "3",
+   "gist": "Use proof by reduction in the AGM to show that if the DL assumption holds, then the Schnorr signature is EUF-CMA secure. Hint: Recall that our goal is to use a program $\\adv$ that plays the EUF-CMA attack game, from…"
+  },
+  {
+   "id": "4/reading-3",
+   "week": "4",
+   "env": "reading",
+   "number": "3",
+   "gist": "Using the Schnorr identification protocol as a mental model, read about the definition of a Sigma protocol in: Dan Boneh and Victor Shoup - A Graduate Course in Applied Cryptography - Section 19.4.",
+   "sources": [
+    {
+     "file": "Sigma Definition Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week4/readings/Sigma%20Definition%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "4/exercise-4",
+   "week": "4",
+   "env": "exercise",
+   "number": "4",
+   "gist": "Many applications of Sigma protocols require a large challenge space.This exercise shows that we can always take a Sigma protocol with a small challenge space and turn it into one with a large challenge space,…"
+  },
+  {
+   "id": "5/reading-1",
+   "week": "5",
+   "env": "reading",
+   "number": "1",
+   "gist": "Read about Okamoto's protocol, the Chaum-Pedersen protocol, and a Sigma protocols for arbitrary linear relations (optionally, also read about a Sigma protocol for the pre-image of a homomorphism) in: Dan Boneh and…",
+   "sources": [
+    {
+     "file": "Sigma Examples Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week5/readings/Sigma%20Examples%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "5/exercise-1",
+   "week": "5",
+   "env": "exercise",
+   "number": "1",
+   "gist": "Proofs of Discrete Log Equality, also referred to as PoDLEs (pronounced poodles) or DLEQ proofs, are a Sigma protocol where the verifier has is given four group elements, $g$, $h$, $A$, and $B$, and the prover shows…"
+  },
+  {
+   "id": "5/reading-2",
+   "week": "5",
+   "env": "reading",
+   "number": "2",
+   "gist": "Using the Schnorr signature as a mental model, read about the Fiat-Shamir transform for Sigma protocols in: Dan Boneh and Victor Shoup - A Graduate Course in Applied Cryptography - Section 19.6.",
+   "sources": [
+    {
+     "file": "Sigma Fiat-Shamir Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week5/readings/Sigma%20Fiat-Shamir%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "5/exercise-2",
+   "week": "5",
+   "env": "exercise",
+   "number": "2",
+   "gist": "Use the Fiat-Shamir transform applied to your solution for Exercise 1 to create a non-interactive DLEQ proof algorithm. Compare your proposal to BIP 374."
+  },
+  {
+   "id": "5/exercise-3",
+   "week": "5",
+   "env": "exercise",
+   "number": "3",
+   "gist": "Suppose you have a Sigma protocol, $(P, V)$, that is special HVZK. Show that the signature scheme resulting from the variant of the Fiat-Shamir transform where we set the challenge to be $c = H(m)$ instead of $c =…"
+  },
+  {
+   "id": "5/reading-3",
+   "week": "5",
+   "env": "reading",
+   "number": "3",
+   "gist": "Read about combining Sigma protocols in: Dan Boneh and Victor Shoup - A Graduate Course in Applied Cryptography - Section 19.7.",
+   "sources": [
+    {
+     "file": "Combining Sigmas Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week5/readings/Combining%20Sigmas%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "5/exercise-4",
+   "week": "5",
+   "env": "exercise",
+   "number": "4",
+   "gist": "Generalize the AND-proof and OR-proof constructions in the previous reading from two Sigma protocols to $n$ Sigma protocols (where $n\\geq 2$ is a constant number). State the relations for your new Sigma protocols,…"
+  },
+  {
+   "id": "5/reading-4",
+   "week": "5",
+   "env": "reading",
+   "number": "4",
+   "gist": "Read about how we can use OMDL to prove Schnorr ID secure against impersonation under concurrent attacks (IMP-CA) in the following paper, skipping the sections about GQ: Mihir Bellare and Adriana Palacio - GQ and…",
+   "sources": [
+    {
+     "file": "Schnorr ID Concurrent Attacks Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week5/readings/Schnorr%20ID%20Concurrent%20Attacks%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "5/exercise-5",
+   "week": "5",
+   "env": "exercise",
+   "number": "5",
+   "gist": "Justify the statement “that the DL oracle can be in fact implemented in p.p.t. when the solving algorithm is required to be algebraic.” Specifically, describe how the DL oracle should be implemented."
+  },
+  {
+   "id": "5/exercise-6",
+   "week": "5",
+   "env": "exercise",
+   "number": "6",
+   "gist": "The first paper cited, BP02, in the claim “as it turns out that essentially all security proofs in the literature use the OMDL problem in an algebraic and thus falsifiable fashion” is actually the paper from the…"
+  },
+  {
+   "id": "6/exercise-1",
+   "week": "6",
+   "env": "exercise",
+   "number": "1",
+   "gist": "Recall that for a group $\\G$ of order $p$ with generators $g$ and $h$, a Pedersen commitment to $x\\in\\Z_p$ with randomness $y\\in\\Z_p$ is of the form $C = g^xh^y$. Construct a special HVZK Sigma protocol with special…"
+  },
+  {
+   "id": "6/reading-1",
+   "week": "6",
+   "env": "reading",
+   "number": "1",
+   "gist": "Read about a simple and general forking lemma in: Mihir Bellare and Gregory Neven - New Multi-Signature Schemes and a General Forking Lemma - Section 3. DO NOT (YET) READ SECTION 4!",
+   "sources": [
+    {
+     "file": "Bellare-Neven Multisignatures and Generalized Forking Lemma Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week6/readings/Bellare-Neven%20Multisignatures%20and%20Generalized%20Forking%20Lemma%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "6/exercise-2",
+   "week": "6",
+   "env": "exercise",
+   "number": "2",
+   "gist": "Using the lemma from Reading 1, write up a proof in your own words that Schnorr digital signatures are secure in the Random Oracle Model if the Discrete Log problem is hard. You may refer back to the proofs in Katz…"
+  },
+  {
+   "id": "6/reading-2",
+   "week": "6",
+   "env": "reading",
+   "number": "2",
+   "gist": "Read the general forking lemma's author's proof of the security of the Schnorr digital signature that they used to demonstrate the use of their lemma in: Mihir Bellare and Gregory Neven - New Multi-Signature Schemes…",
+   "sources": [
+    {
+     "file": "Bellare-Neven Multisignatures and Generalized Forking Lemma Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week6/readings/Bellare-Neven%20Multisignatures%20and%20Generalized%20Forking%20Lemma%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "6/exercise-3",
+   "week": "6",
+   "env": "exercise",
+   "number": "3",
+   "gist": "In the following reading, pause on page 9 when you reach the SECURITY section, read the first paragraph of that section, and then attempt to define multi-signature scheme security against concurrent attacks using an…"
+  },
+  {
+   "id": "6/reading-3",
+   "week": "6",
+   "env": "reading",
+   "number": "3",
+   "gist": "Read about MuSig in: Gregory Maxwell, Andrew Poelstra, Yannick Seurin, and Pieter Wuille - Simple Schnorr Multi-Signatures with Applications to Bitcoin.",
+   "sources": [
+    {
+     "file": "MuSig Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week6/readings/MuSig%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "7/reading-1",
+   "week": "7",
+   "env": "reading",
+   "number": "1",
+   "gist": "Read about a commonly-used method of organizing complicated security proofs based on using many indistinguishably small transitions in: Victor Shoup - Sequences of Games: A Tool for Taming Complexity in Security Proofs.",
+   "sources": [
+    {
+     "file": "Sequences of Games Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week7/readings/Sequences%20of%20Games%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "7/reading-2",
+   "week": "7",
+   "env": "reading",
+   "number": "2",
+   "gist": "Read about another commonly-used method of organizing complicated security proofs that introduces the background for the Universal Composability (UC) framework in: Yehuda Lindell - How To Simulate It – A Tutorial on…",
+   "sources": [
+    {
+     "file": "Simulation Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week7/readings/Simulation%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "7/reading-3",
+   "week": "7",
+   "env": "reading",
+   "number": "3",
+   "gist": "Read about MuSig2 in: Jonas Nick, Tim Ruffing, and Yannick Seurin - MuSig2: Simple Two-Round Schnorr Multi-Signatures.",
+   "sources": [
+    {
+     "file": "MuSig2 Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week7/readings/MuSig2%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "7/lemma-1",
+   "week": "7",
+   "env": "lemma",
+   "number": "1",
+   "gist": "If $f$ is a non-zero polynomial such that $f(a) = 0$ (in which case we call $a$ a “root” of $f$), then $f(x)$ can be written as $(x-a)\\cdot g(x)$ for some polynomial $g(x)$ of degree one less than $f$."
+  },
+  {
+   "id": "7/lemma-2",
+   "week": "7",
+   "env": "lemma",
+   "number": "2",
+   "gist": "If $f(x)$ is a non-zero degree $t-1$ polynomial, it has at most $t-1$ roots."
+  },
+  {
+   "id": "7/thm-3",
+   "week": "7",
+   "env": "thm",
+   "number": "3",
+   "gist": "If $L(x)$ and $f(x)$ are two polynomials of degree $t-1$ that agree on $t$ distinct values, then $L(x) = f(x)$."
+  },
+  {
+   "id": "7/reading-4",
+   "week": "7",
+   "env": "reading",
+   "number": "4",
+   "gist": "In preparation for reading about FROST, read about Pedersen's trustless distributed key generation protocol in the extended abstract of: Torben Pedersen - A Threshold Cryptosystem without a Trusted Party.",
+   "sources": [
+    {
+     "file": "Pedersen DKG Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week7/readings/Pedersen%20DKG%20Reading.pdf"
+    }
+   ]
+  },
+  {
+   "id": "7/reading-5",
+   "week": "7",
+   "env": "reading",
+   "number": "5",
+   "gist": "Read about FROST in: Chelsea Komlo and Ian Goldberg - FROST: Flexible Round-Optimized Schnorr Threshold Signatures.",
+   "sources": [
+    {
+     "file": "FROST Reading.pdf",
+     "url": "https://github.com/cryptography-camp/prework/blob/fae44171ad7aa1ff09b9e5756e794b7537cca38d/week7/readings/FROST%20Reading.pdf"
+    }
+   ]
+  }
+ ],
+ "macros": {
+  "\\N": "\\mathbb{N}",
+  "\\Z": "\\mathbb{Z}",
+  "\\Q": "\\mathbb{Q}",
+  "\\F": "\\mathbb{F}",
+  "\\Pro": "\\mathbb{P}",
+  "\\overarrow": "\\stackrel{#1}{\\rightarrow}",
+  "\\verts": "\\left\\vert #1\\right\\vert",
+  "\\M": "\\mathcal{M}",
+  "\\C": "\\mathcal{C}",
+  "\\K": "\\mathcal{K}",
+  "\\Kpriv": "\\mathcal{K}_{\\text{priv}}",
+  "\\Kpub": "\\mathcal{K}_{\\text{pub}}",
+  "\\var": "\\mathit{#1}",
+  "\\pckeystyle": "\\mathit{#1}",
+  "\\pcpolynomialstyle": "\\mathit{#1}",
+  "\\gamechange": "\\colorbox{#ffe9a8}{$#1$}",
+  "\\algo": "\\mathsf",
+  "\\mathsc": "\\mathrm{#1}",
+  "\\pcoraclestyle": "\\mathrm{#1}",
+  "\\oracle": "\\mathrm{#1}",
+  "\\pcsc": "\\,;~",
+  "\\G": "\\mathbb{G}",
+  "\\pr": "\\text{Pr}\\left[#1\\right]",
+  "\\secpar": "\\lambda",
+  "\\adv": "\\mathcal{A}",
+  "\\bdv": "\\mathcal{B}",
+  "\\advantage": "\\mathsf{Adv}^{\\mathsf{#1}}_{#2}",
+  "\\pcalgostyle": "\\mathsf{#1}",
+  "\\game": "\\operatorname{#1}_{#2}^{\\mathcal{A}}(\\lambda)",
+  "\\ensuremath": "#1",
+  "\\sample": "\\xleftarrow{\\$}",
+  "\\pcreturn": "\\mathbf{return}\\ "
+ }
+}

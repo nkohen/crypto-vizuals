@@ -3,8 +3,11 @@ import type { ReactNode } from 'react';
 import { RICH_TEXT_TOKEN_RE } from './richTextTokens';
 import { PC_MACROS } from './pcMacros';
 
-/** Render TeX to KaTeX HTML, with the shared pseudocode vocabulary available. */
-export function katexHtml(tex: string, displayMode: boolean): string {
+/**
+ * Render TeX to KaTeX HTML. `macros` defaults to the shared pseudocode vocabulary;
+ * content with its own preamble (the prework handouts) passes a superset.
+ */
+export function katexHtml(tex: string, displayMode: boolean, macros: Record<string, string> = PC_MACROS): string {
   return katex.renderToString(tex, {
     displayMode,
     throwOnError: false,
@@ -12,12 +15,12 @@ export function katexHtml(tex: string, displayMode: boolean): string {
     // Inherit the surrounding text color so math reads correctly in the dark theme.
     trust: false,
     // A fresh copy: KaTeX writes \gdef definitions back into the object it is given.
-    macros: { ...PC_MACROS },
+    macros: { ...macros },
   });
 }
 
 /** Render a narration/heading string with inline LaTeX and light markup into React nodes. */
-export function renderRichText(text: string): ReactNode[] {
+export function renderRichText(text: string, macros?: Record<string, string>): ReactNode[] {
   return text.split(RICH_TEXT_TOKEN_RE).map((part, i) => {
     if (!part) return null;
 
@@ -26,7 +29,7 @@ export function renderRichText(text: string): ReactNode[] {
         <span
           key={i}
           className="katex-display-inline"
-          dangerouslySetInnerHTML={{ __html: katexHtml(part.slice(2, -2), true) }}
+          dangerouslySetInnerHTML={{ __html: katexHtml(part.slice(2, -2), true, macros) }}
         />
       );
     }
@@ -35,7 +38,7 @@ export function renderRichText(text: string): ReactNode[] {
         <span
           key={i}
           className="katex-inline"
-          dangerouslySetInnerHTML={{ __html: katexHtml(part.slice(1, -1), false) }}
+          dangerouslySetInnerHTML={{ __html: katexHtml(part.slice(1, -1), false, macros) }}
         />
       );
     }
