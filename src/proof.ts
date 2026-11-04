@@ -59,6 +59,7 @@ export const streamCipherProof: Proof = {
         { id: 'a4', from: 'xor-node', to: 'val-c', label: '$G(k) \\oplus m$', flow: true },
       ],
       diagramNote: 'Encryption = message XOR the generator output. The pad is G(k).',
+      figures: ['stream-cipher'],
     },
 
     // 3 ─────────────────────────────────────────────
@@ -81,6 +82,7 @@ export const streamCipherProof: Proof = {
         { id: 'a3', from: 'adv-a', to: 'eav-challenger', label: '$b\'$', flow: true, curve: -55 },
       ],
       diagramNote: 'A must guess which message was encrypted. Winning > 1/2 breaks the cipher.',
+      figures: ['privk-eav'],
     },
 
     // 4 ─────────────────────────────────────────────
@@ -103,6 +105,7 @@ export const streamCipherProof: Proof = {
         { id: 'a3', from: 'adv-a', to: 'eav-challenger', label: '$b\'$', flow: true, curve: -55 },
       ],
       diagramNote: 'A wins with advantage ε. We will turn A into a PRG-distinguisher.',
+      figures: ['privk-eav'],
     },
 
     // 5 ─────────────────────────────────────────────
@@ -145,6 +148,7 @@ export const streamCipherProof: Proof = {
         { id: 'a2', from: 'red-b', to: 'prg-challenger', label: '$1 / 0$', flow: true, curve: 60 },
       ],
       diagramNote: 'B receives y from the PRG challenger and must decide: real or random?',
+      figures: ['prg'],
     },
 
     // 7 ─────────────────────────────────────────────
@@ -172,6 +176,7 @@ export const streamCipherProof: Proof = {
         { id: 'a4', from: 'b-role', to: 'adv-a', label: '$c = y \\oplus m_b$', flow: true, curve: 30 },
       ],
       diagramNote: 'B forwards y as the keystream and plays A\'s encryption challenger.',
+      figures: ['reduction-b'],
     },
 
     // 8 ─────────────────────────────────────────────
@@ -200,6 +205,7 @@ export const streamCipherProof: Proof = {
         { id: 'a5', from: 'val-bp', to: 'prg-challenger', label: '$1$ if $b\'=b$, else $0$', flow: true, curve: 40 },
       ],
       diagramNote: "A's correct guess ⇒ B votes 'real'. A's failure ⇒ B votes 'random'.",
+      figures: ['reduction-b'],
     },
 
     // 9 ─────────────────────────────────────────────
@@ -226,6 +232,7 @@ export const streamCipherProof: Proof = {
         { id: 'a4', from: 'red-b', to: 'prg-challenger', label: '$\\mathsf{Adv}_B = \\varepsilon$', flow: true, curve: 60 },
       ],
       diagramNote: 'Real world ⇒ A wins (adv ε). Random world ⇒ A can\'t (1/2). Gap = ε = Adv_B.',
+      figures: ['prg', 'reduction-b'],
     },
 
     // 10 ────────────────────────────────────────────
@@ -252,6 +259,84 @@ export const streamCipherProof: Proof = {
         { id: 'a4', from: 'red-b', to: 'prg-challenger', label: 'contradiction', flow: true, curve: 60 },
       ],
       diagramNote: 'Secure G ⇒ no efficient A breaks Π. The reduction preserves advantage exactly.',
+    },
+  ],
+
+  // Formal pseudocode, in the vocabulary of ./pcMacros.ts. These follow the
+  // definitions in stream-cipher-security.tex: PRG security as two worlds (not
+  // a single hidden bit) and the message space {0,1}^ℓ(n).
+  figures: [
+    {
+      id: 'stream-cipher',
+      caption: 'The stream cipher $\\Pi = (\\mathsf{Gen}, \\mathsf{Enc}, \\mathsf{Dec})$ built from a PRG $G$ with expansion $\\ell$.',
+      layout: 'hstack',
+      procedures: [
+        {
+          title: '$\\mathsf{Gen}(1^n)$',
+          lines: [{ code: 'k \\sample \\{0,1\\}^n' }, { code: '\\pcreturn k' }],
+        },
+        {
+          title: '$\\mathsf{Enc}_k(m)$',
+          lines: [{ code: '\\pcreturn G(k) \\oplus m' }],
+        },
+        {
+          title: '$\\mathsf{Dec}_k(c)$',
+          lines: [{ code: '\\pcreturn G(k) \\oplus c' }],
+        },
+      ],
+    },
+    {
+      id: 'privk-eav',
+      caption:
+        'The eavesdropping experiment for $\\Pi$. $\\Pi$ is EAV-secure if every efficient $\\adv$ wins with probability at most $\\tfrac{1}{2} + \\mathsf{negl}(n)$.',
+      layout: 'vstack',
+      procedures: [
+        {
+          title: 'Game $\\mathsf{PrivK}^{\\mathsf{eav}}_{\\adv,\\Pi}(n)$',
+          lines: [
+            { code: '(m_0, m_1) \\gets \\adv(1^n)', comment: '$m_0, m_1 \\in \\{0,1\\}^{\\ell(n)}$' },
+            { code: 'k \\sample \\{0,1\\}^n' },
+            { code: 'b \\sample \\{0,1\\}' },
+            { code: 'c \\defeq G(k) \\oplus m_b', comment: '$c = \\mathsf{Enc}_k(m_b)$' },
+            { code: "b' \\gets \\adv(c)" },
+            { code: "\\pcreturn b' = b" },
+          ],
+        },
+      ],
+    },
+    {
+      id: 'prg',
+      caption:
+        'PRG security for $G$ as two worlds. The advantage of a distinguisher $\\bdv$ is $\\lvert \\Pr[\\mathsf{Real}^{\\bdv}_G(n) = 1] - \\Pr[\\mathsf{Rand}^{\\bdv}_G(n) = 1] \\rvert$.',
+      layout: 'hstack',
+      procedures: [
+        {
+          title: 'Game $\\mathsf{Real}^{\\bdv}_G(n)$',
+          lines: [{ code: 's \\sample \\{0,1\\}^n' }, { code: 'y \\defeq G(s)' }, { code: '\\pcreturn \\bdv(y)' }],
+        },
+        {
+          title: 'Game $\\mathsf{Rand}^{\\bdv}_G(n)$',
+          lines: [{ code: 'y \\sample \\{0,1\\}^{\\ell(n)}' }, { code: '\\pcreturn \\bdv(y)' }],
+        },
+      ],
+    },
+    {
+      id: 'reduction-b',
+      caption:
+        'The distinguisher $\\bdv$, which runs $\\adv$ and plays its EAV challenger. Changes from $\\mathsf{PrivK}^{\\mathsf{eav}}_{\\adv,\\Pi}$ are highlighted; $\\bdv$ never samples a key $k$.',
+      layout: 'vstack',
+      procedures: [
+        {
+          title: 'Distinguisher $\\bdv^{\\adv}(y)$',
+          lines: [
+            { code: '(m_0, m_1) \\gets \\adv(1^n)' },
+            { code: 'b \\sample \\{0,1\\}' },
+            { code: 'c \\defeq y \\oplus m_b', highlight: true, comment: 'the challenge $y$ replaces $G(k)$' },
+            { code: "b' \\gets \\adv(c)" },
+            { code: "\\pcreturn b' = b", comment: 'output $1$ ("real") iff $\\adv$ wins' },
+          ],
+        },
+      ],
     },
   ],
 };
