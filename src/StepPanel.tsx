@@ -1,16 +1,19 @@
 import { ChevronLeft, ChevronRight, BookOpen, CheckCircle2 } from 'lucide-react';
-import type { ProofStep } from './types';
+import type { ProofStep, PseudocodeFigure as Figure } from './types';
 import { renderRichText } from './richText';
+import PseudocodeFigure from './PseudocodeFigure';
 
 interface Props {
   step: ProofStep;
+  /** The pseudocode figures this step refers to, already resolved from the proof. */
+  figures?: Figure[];
   index: number;
   total: number;
   onPrev: () => void;
   onNext: () => void;
 }
 
-export default function StepPanel({ step, index, total, onPrev, onNext }: Props) {
+export default function StepPanel({ step, figures = [], index, total, onPrev, onNext }: Props) {
   return (
     <div className="flex h-full flex-col">
       {/* header */}
@@ -31,6 +34,15 @@ export default function StepPanel({ step, index, total, onPrev, onNext }: Props)
             {renderRichText(p)}
           </p>
         ))}
+
+        {/* formal pseudocode for the games / reduction this step discusses */}
+        {figures.length > 0 && (
+          <div className="mt-4 space-y-3 animate-fade-up" style={{ animationDelay: `${step.narration.length * 60}ms` }}>
+            {figures.map((f) => (
+              <PseudocodeFigure key={f.id} figure={f} />
+            ))}
+          </div>
+        )}
 
         {/* claim callout */}
         <div className="mt-5 rounded-xl border border-jade-500/25 bg-jade-500/8 p-3.5 animate-fade-up" style={{ animationDelay: `${step.narration.length * 60}ms` }}>

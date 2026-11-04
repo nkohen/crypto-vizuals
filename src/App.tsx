@@ -176,6 +176,7 @@ export default function App() {
             <div className="rounded-2xl border border-ink-700/60 bg-ink-900/50 overflow-hidden h-full sticky top-[88px]">
               <StepPanel
                 step={step}
+                figures={(step.figures ?? []).flatMap((id) => proof.figures?.find((f) => f.id === id) ?? [])}
                 index={index}
                 total={total}
                 onPrev={prev}

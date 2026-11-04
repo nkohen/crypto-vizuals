@@ -1,14 +1,18 @@
 import katex from 'katex';
 import type { ReactNode } from 'react';
 import { RICH_TEXT_TOKEN_RE } from './richTextTokens';
+import { PC_MACROS } from './pcMacros';
 
-function katexHtml(tex: string, displayMode: boolean): string {
+/** Render TeX to KaTeX HTML, with the shared pseudocode vocabulary available. */
+export function katexHtml(tex: string, displayMode: boolean): string {
   return katex.renderToString(tex, {
     displayMode,
     throwOnError: false,
     strict: false,
     // Inherit the surrounding text color so math reads correctly in the dark theme.
     trust: false,
+    // A fresh copy: KaTeX writes \gdef definitions back into the object it is given.
+    macros: { ...PC_MACROS },
   });
 }
 
