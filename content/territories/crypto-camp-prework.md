@@ -59,7 +59,7 @@ Every nonzero $a \in \Z_p$ has a unique $b$ with $ab \equiv 1 \pmod p$, and this
 ### `groups-discrete-log` · Abelian groups and the discrete log problem
 An abelian group is the "interface" that Diffie–Hellman, ElGamal and Schnorr are written against. The course mostly works in a group $\G$ of prime order with a generator $g$. The discrete log problem (recover $x$ from $g^x$) can be posed in any such group, but how hard it is depends on the particular group, not on the interface. Elliptic-curve groups, which Bitcoin uses, are an optional extension.
 
-- **Prework:** `1/reading-5`, `1/reading-6`
+- **Prework:** `1/reading-5`, `1/reading-6`, `1/exercise-5`
 - **Route:** Groups as an interface
   - formal ← `sets-functions` — a group is a set with an operation satisfying axioms
   - informal ← `modular-inverses` — the nonzero residues mod $p$ under multiplication are the first worked example, and inverses are what make them a group
@@ -135,16 +135,11 @@ A function is negligible if it eventually stays below $1/p(\lambda)$ for every p
 The DL, CDH and DDH assumptions each say that every efficient adversary has negligible advantage in its game: compute $x$ from $g^x$; compute $g^{xy}$ from $g^x, g^y$; tell $g^{xy}$ apart from a random element. As hardness statements they form a chain, DDH-hard $\Rightarrow$ CDH-hard $\Rightarrow$ DL-hard, so DDH is the strongest of the three assumptions.
 
 - **Prework:** `2a/exercise-4`, `3/exercise-3`
-- **Route:** Informal first pass (Week 2a)
+- **Route:** Hardness assumptions as games
   - formal ← `attack-games` — each assumption is a statement about a game's advantage
   - formal ← `diffie-hellman-elgamal` — CDH and DDH are about the Diffie–Hellman shared secret
   - formal ← `proof-by-reduction` — the relations between assumptions are proved in contrapositive form
-  - informal ← `asymptotic-security` — "negligible" is read here only as "unbelievably small"
-- **Route:** Rigorous pass (Week 3 revisit)
-  - formal ← `attack-games` — each assumption is a statement about a game's advantage
-  - formal ← `diffie-hellman-elgamal` — CDH and DDH are about the Diffie–Hellman shared secret
-  - formal ← `proof-by-reduction` — the relations between assumptions are proved in contrapositive form
-  - formal ← `asymptotic-security` — the exact definitions of negligible and of PPT adversaries
+  - formal ← `asymptotic-security` — each assumption says every efficient adversary's advantage is negligible (read informally in Week 2a, made exact in Week 3)
 
 ### `one-time-pad` · The distinguishing game and the one-time pad
 In the cipher-distinguishing game, the adversary chooses two messages and must tell which one a challenge ciphertext encrypts. The one-time pad $E(k, m) = k \oplus m$ achieves advantage exactly $0$, which is called perfect secrecy. Shannon showed that perfect secrecy requires keys at least as long as messages, and that is what motivates pseudo-random generators.
@@ -159,32 +154,26 @@ In the cipher-distinguishing game, the adversary chooses two messages and must t
 A pseudo-random generator (PRG) deterministically stretches a short seed into a longer string. Its security is a distinguishing game, which the prework asks you to write yourself. The stream cipher $E_G(k, m) = G(k) \oplus m$ is the one-time pad with a stretched key. "Secure PRG $\Rightarrow$ secure stream cipher" is the course's first proof that a scheme is secure under an assumption about a primitive, and it is possible only because security asks for negligible advantage rather than zero.
 
 - **Prework:** `2b/exercise-7`, `2b/exercise-8`, `3/exercise-3`
-- **Route:** Informal first pass (Week 2b)
+- **Route:** Stretching the pad's key
   - formal ← `attack-games` — the PRG game is modeled on the games already seen
   - formal ← `one-time-pad` — the stream cipher is the pad with a stretched key, and its security uses the same distinguishing game
   - formal ← `proof-by-reduction` — the theorem is proved in contrapositive form
   - formal ← `finite-probability` — the reduction's advantage has to be computed, not just asserted
-  - informal ← `asymptotic-security` — "negligible" is still read informally
-- **Route:** Rigorous pass (Week 3 revisit)
-  - formal ← `attack-games` — the PRG game is modeled on the games already seen
-  - formal ← `one-time-pad` — the stream cipher is the pad with a stretched key, and its security uses the same distinguishing game
-  - formal ← `proof-by-reduction` — the theorem is proved in contrapositive form
-  - formal ← `finite-probability` — the reduction's advantage has to be computed, not just asserted
-  - formal ← `asymptotic-security` — "not negligible in, not negligible out" made exact
+  - formal ← `asymptotic-security` — "not negligible in, not negligible out" (read informally in Week 2b, made exact in Week 3)
 
 ## F. Signatures and idealized models
 
 ### `euf-cma` · Signature schemes and EUF-CMA security
 A signature scheme is a triple of algorithms $(G, S, V)$. EUF-CMA security says that no PPT adversary with access to a signing oracle can output a valid signature on a message it never queried, except with negligible probability. Its advantage is $\pr{\text{win}}$ with no $-\tfrac{1}{2}$, because guessing gives a forger nothing.
 
-- **Prework:** `3/reading-2`
+- **Prework:** `3/reading-2`, `3/exercise-4`
 - **Route:** Unforgeability as a game
   - formal ← `attack-games` — the EUF-CMA game, now with an oracle
   - formal ← `asymptotic-security` — PPT forgers and negligible advantage
   - informal ← `schnorr-signature-scheme` — the scheme this definition will be applied to
 
 ### `reduction-diagrams` · Box-within-a-box pictures
-A reduction drawn as nested boxes: the outer challenger, the reduction $\adv'$, and the adversary $\adv$ running inside it, with a wire for every message that crosses a boundary. The handouts draw reductions this way from Week 3 on, and this tool's diagrams use the same picture. It makes visible which party knows which secret and who answers whose queries. *(informal concept)*
+A reduction drawn as nested boxes: the outer challenger, the reduction $\adv'$, and the adversary $\adv$ running inside it, with a wire for every message that crosses a boundary. The Week 3 handout draws its worked reduction this way, and this tool's diagrams use the same picture. It makes visible which party knows which secret and who answers whose queries. *(informal concept)*
 
 - **Route:** Drawing a reduction
   - informal ← `proof-by-reduction` — the magic box, drawn literally
@@ -214,7 +203,8 @@ In the Algebraic Group Model (AGM), an adversary must accompany every group elem
 - **Prework:** `4/exercise-2`
 - **Route:** Adversaries that show their work
   - formal ← `groups-discrete-log` — a representation is a product of powers of group elements the adversary was given
-  - formal ← `dh-assumptions` — the AGM restates the DL and CDH games for algebraic adversaries
+  - formal ← `attack-games` — "algebraic" restricts the adversary that plays a game
+  - informal ← `dh-assumptions` — the handout's first example of an algebraic adversary plays the CDH game, and `4/exercise-2` relates CDH to DL in the AGM
 
 ## G. Schnorr security
 
@@ -272,7 +262,7 @@ The central theorem of the prework: if discrete log is hard in $\G$, then Schnor
   - formal ← `oracle-simulation` — the reduction has to answer the forger's oracle queries itself
   - formal ← `dh-assumptions` — the DL game is the assumption reduced to
   - formal ← `schnorr-signature-scheme` — the scheme being proved secure
-  - informal ← `identification-schemes` — the signature is Schnorr identification made non-interactive
+  - formal ← `identification-schemes` — the exercise's hint has the reduction reuse a step from the Katz–Lindell Schnorr identification proof
 - **Route:** ROM, via the general forking lemma (Bellare–Neven, Week 6)
   - formal ← `general-forking-lemma` — invoked once instead of an inline rewinding argument
   - formal ← `random-oracle-model` — the hash is a random oracle
@@ -320,7 +310,7 @@ Two Sigma protocols can be combined into one that proves both statements (AND), 
   - formal ← `sigma-protocols` — composition is defined on Sigma protocols and their properties
 
 ### `pedersen-range-proof` · Pedersen commitments and a range proof
-A Pedersen commitment $C = g^x h^y$ hides $x$ perfectly, and it binds the committer as long as nobody knows the discrete log of $h$ to the base $g$. The Week 6 exercise builds a range proof by committing to a value bit by bit and proving that each commitment holds a bit.
+A Pedersen commitment $C = g^x h^y$ hides $x$ perfectly, and it is computationally binding as long as discrete log is hard (in particular, nobody may know $\log_g h$). The Week 6 exercise builds a range proof by committing to a value bit by bit and proving that each commitment holds a bit.
 
 - **Prework:** `6/exercise-1`
 - **Route:** Commitments plus composition
@@ -331,11 +321,11 @@ A Pedersen commitment $C = g^x h^y$ hides $x$ perfectly, and it binds the commit
 ## I. One-more discrete log and concurrent attacks
 
 ### `omdl` · One-more discrete log (OMDL)
-In the OMDL game, the adversary gets $k$ challenges $g^{x_1}, \dots, g^{x_k}$ and may call a discrete-log oracle $k-1$ times, and it must output all $k$ logs. Week 2a's worked example shows OMDL-hard $\Rightarrow$ DL-hard, so OMDL is the stronger assumption. It is the tool for proofs in which the reduction cannot fix the challenge before it commits, as in interactive or multi-party signing.
+In the OMDL game, the adversary gets $k$ challenges $g^{x_1}, \dots, g^{x_k}$ and may call a discrete-log oracle $k-1$ times, and it must output all $k$ logs. Week 2a's worked example shows OMDL-hard $\Rightarrow$ DL-hard, so OMDL is the stronger assumption. Komlo's note, quoted in Week 5, describes OMDL as useful when the reduction has to pick a commitment $R$ before it knows the challenge, as in threshold or blind signatures. In this course, though, MuSig and FROST are proved under DL, and MuSig2 is proved under AOMDL.
 
 - **Route:** DL with a helper oracle
   - formal ← `dh-assumptions` — OMDL extends the DL game with a discrete-log oracle
-  - informal ← `proof-by-reduction` — the Week 2a worked example relates OMDL to DL
+  - formal ← `proof-by-reduction` — OMDL-hard ⇒ DL-hard is proved in contrapositive form (Week 2a worked example)
 
 ### `aomdl` · Algebraic OMDL and falsifiability
 An assumption is falsifiable if a PPT challenger can decide whether a given algorithm breaks it. OMDL is not obviously falsifiable, because its challenger has to answer discrete-log queries. AOMDL requires every oracle query to come with a representation in terms of $g$ and the challenges received so far. OMDL implies AOMDL, and "algebraic" here constrains the reduction, independently of whether the AGM is assumed.
@@ -356,7 +346,7 @@ IMP-CA security: an impersonator may first run many sessions with honest provers
   - formal ← `rewinding` — the paper's Reset Lemma is a rewinding bound
   - informal ← `fiat-shamir` — why the signature version avoids this assumption
 - **Route:** From AOMDL (falsifiable variant)
-  - formal ← `aomdl` — the Week 5 exercise recasts the paper's reduction as an AOMDL adversary
+  - formal ← `aomdl` — the Week 5 exercise takes the paper's OMDL reduction (Figure 5) and adds the coefficient data AOMDL asks for, so this route reuses the From-OMDL proof rather than replacing it
   - formal ← `identification-schemes` — the scheme and the impersonation game
   - formal ← `rewinding` — the paper's Reset Lemma is a rewinding bound
 
@@ -425,7 +415,7 @@ Pedersen's DKG lets $n$ parties jointly generate a random polynomial that no sin
   - formal ← `groups-discrete-log` — the public key and the verification values are group elements
 
 ### `frost` · FROST threshold Schnorr signatures
-FROST (Komlo–Goldberg) lets any $t$ of $n$ key holders produce an ordinary Schnorr signature under their shared key. It uses a Pedersen-style DKG, Lagrange coefficients, and a two-round signing protocol (one round with preprocessing). The paper proves an interactive variant secure under DL in the ROM using the general forking lemma.
+FROST (Komlo–Goldberg) lets any $t$ of $n$ key holders produce an ordinary Schnorr signature under their shared key. It uses a Pedersen-style DKG, Lagrange coefficients, and a two-round signing protocol (one round with preprocessing). The paper proves an interactive variant secure under DL in the ROM using the general forking lemma. That variant derives one value with a one-time VRF in place of a hash. The paper argues only heuristically that the proof carries over to FROST itself.
 
 - **Prework:** `7/reading-5`
 - **Route:** Threshold Schnorr
@@ -473,7 +463,7 @@ FROST (Komlo–Goldberg) lets any $t$ of $n$ key holders produce an ordinary Sch
 - **Notation drifts across readings.** The course uses $\lambda$ for the security parameter, Katz–Lindell use $n$, and Bellare–Palacio use $k$. The course's distinguishing advantage is the signed $\pr{\text{win}} - \tfrac{1}{2}$. Boneh–Shoup's two-experiment advantage $\lvert \pr{W_0} - \pr{W_1} \rvert$ is twice its absolute value. Search-game and EUF-CMA advantages have no $-\tfrac{1}{2}$.
 - **Three routes to Schnorr EUF-CMA. Do not collapse them.** The AGM route still uses the ROM. The forking-lemma route is explicitly asked to avoid invoking Fiat–Shamir, so `fiat-shamir` is informal on that route only.
 - **"Algebraic" in AOMDL is not the AGM.** The handout quotes MuSig2 on this: it is a restriction on the reduction, orthogonal to the AGM. The edge is informal on purpose.
-- **Rigor comes in two passes.** Weeks 2a/2b use "negligible" informally, and Week 3 (`3/exercise-3`) revisits those reductions rigorously. That is why `dh-assumptions` and `prg-stream-cipher` each have an informal-pass route and a rigorous-pass route.
+- **Rigor comes in two passes.** Weeks 2a/2b use "negligible" informally, and Week 3 (`3/exercise-3`) revisits those reductions rigorously. `dh-assumptions` and `prg-stream-cipher` each have one route with a formal edge to `asymptotic-security`. A learner on a Week 2a/2b exercise holds that node only at its informal reading ("unbelievably small"), not at the exact definition.
 - **Granted facts.** Several exercises explicitly grant facts proved later (independence products and squares of non-negligible functions in `2a/exercise-4`; halves of non-negligible functions in `2b/exercise-8`). Treat these as named imports, not as things the learner has earned.
 - **Informal concepts to model, not drop:** the magic box; the box-within-a-box picture (`reduction-diagrams`); why adversaries are PPT; why ROM query reporting and programming matter; why an honest verifier is a fair assumption for Sigma protocols; Shannon's bound as the motivation for PRGs; birthday paradox to collisions.
 - **Some exercises build on earlier ones** even where the concept edge is informal: `5/exercise-2` starts from `5/exercise-1`; `6/exercise-1` uses the OR construction from `5/reading-3`; `5/exercise-6` reworks the reduction of `5/reading-4`.
@@ -481,7 +471,31 @@ FROST (Komlo–Goldberg) lets any $t$ of $n$ key holders produce an ordinary Sch
 
 ## Audit
 
-*Pending — claim-auditor.*
+**claim-auditor, 2026-11-04: SOUND WITH FIXES.** No reversed implication, no wrong theorem attribution, and no node
+prose that gives a solution move. Verified against the sources: OMDL-hard ⇒ DL-hard in Week 2a's worked example;
+Katz–Lindell Theorems 13.10 (Fiat–Shamir) and 13.11 (Schnorr identification under DL); MuSig2's ROM-only proof with
+four nonces and its AGM proof with two; MuSig's nested double use of the forking lemma; FROST-Interactive under DL in
+the ROM. Fixed in this file:
+
+- `dh-assumptions` and `prg-stream-cipher`: the paired "informal pass / rigorous pass" routes were one path written
+  twice (Week 3 asks students to tighten the same proofs) and encoded a teaching order. Collapsed to one route each,
+  with a formal edge to `asymptotic-security`. The tutor note now says how a Week 2a/2b learner holds that node.
+- `omdl`: over-claimed that OMDL is "the tool" for interactive or multi-party signing. The course's multi-party
+  proofs use DL (MuSig, FROST) and AOMDL (MuSig2). Restated from Komlo's note. The edge to `proof-by-reduction` is
+  now formal, matching `dh-assumptions`.
+- `frost`: scoped the proof claim to FROST-Interactive (which uses a one-time VRF), whose carry-over to FROST the
+  paper argues only heuristically.
+- `reduction-diagrams`: only the Week 3 handout has such figures, not "Week 3 on".
+- `pedersen-range-proof`: the binding claim was not in the handouts and was loosely put. It is now "computationally
+  binding as long as discrete log is hard".
+- `schnorr-euf-cma` (AGM route): `identification-schemes` promoted to formal, since the exercise hint has the
+  reduction reuse a step of that proof.
+- `algebraic-group-model`: `dh-assumptions` demoted to informal (the AGM is defined for any game; CDH is only its
+  first example), and `attack-games` added as the formal need.
+- `schnorr-id-concurrent` (AOMDL route): kept, since it reaches a different theorem, but its edge now says it reuses
+  the OMDL proof.
+- Prework citations: `3/exercise-4` added to `euf-cma` (parts (a) and (b) are attacks, not oracle simulation), and
+  `1/exercise-5` added to `groups-discrete-log`.
 
 ## Adversarial ledger
 
