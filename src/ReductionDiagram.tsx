@@ -301,9 +301,10 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
         </g>
       </svg>
 
+      {/* Below the drawing, never over it: an overlay hid wires and captions. */}
       {note && (
-        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 max-w-[92%]">
-          <div className="rounded-full bg-ink-800/90 border border-ink-600/70 px-4 py-1.5 text-xs text-ink-200 text-center backdrop-blur-sm">
+        <div className="mt-2 flex justify-center px-2">
+          <div className="max-w-[92%] rounded-full border border-ink-600/70 bg-ink-800/90 px-4 py-1.5 text-center text-xs text-ink-200">
             {note}
           </div>
         </div>

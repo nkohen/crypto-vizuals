@@ -7,6 +7,8 @@
 //   ### `node-id` · Node title
 //   Prose…  (ends with *(informal concept)* for an informal node)
 //   - **Prework:** `3/reading-1`, `3/exercise-1`
+//   - **First met:** Week 2a — where, when the handouts introduce it in prose
+//     before any item cites it (optional)
 //   - **Route:** Route name            (or "entry": nothing needed inside the map)
 //     - formal ← `other-id` — how it bears
 //     - informal ← `other-id` — how it bears
@@ -41,6 +43,10 @@ export interface TerritoryNode {
   prose: string;
   informal: boolean;
   prework: string[];
+  /** Week id the handouts first introduce it in, when that is earlier than any cited item. */
+  firstMet?: string;
+  /** Where, in the handouts' prose, it is first met. */
+  firstMetWhere?: string;
   routes: Route[];
   line: number;
 }
@@ -72,6 +78,7 @@ const EXTRA_RE = /^## (.+)$/;
 const NODE_RE = /^### `([a-z0-9][a-z0-9-]*)` · (.+)$/;
 const PREWORK_RE = /^- \*\*Prework:\*\*\s*(.*)$/;
 const ROUTE_RE = /^- \*\*Route:\*\*\s*(.+)$/;
+const FIRST_MET_RE = /^- \*\*First met:\*\*\s*Week (\w+)\s*(?:—\s*(.*))?$/;
 const NEED_RE = /^\s+- (formal|informal) ← `([a-z0-9][a-z0-9-]*)`\s*(?:—\s*(.*))?$/;
 const TICKS_RE = /`([^`]+)`/g;
 
@@ -165,6 +172,12 @@ export function parseTerritory(md: string): Territory {
       route = null;
       return;
     }
+    if ((m = FIRST_MET_RE.exec(line))) {
+      node.firstMet = m[1];
+      node.firstMetWhere = m[2]?.trim();
+      route = null;
+      return;
+    }
     if ((m = ROUTE_RE.exec(line))) {
       const name = m[1].trim();
       route = { name, entry: name.toLowerCase() === 'entry', needs: [] };
@@ -223,6 +236,7 @@ export function validateTerritory(t: Territory, prework?: PreworkIndex): string[
         if (need.node === n.id) problems.push(`line ${n.line}: ${n.id} needs itself`);
       }
     if (prework) for (const p of n.prework) if (!prework.citable.has(p)) problems.push(`line ${n.line}: ${n.id} cites unknown prework item ${p}`);
+    if (prework && n.firstMet && !prework.weekRank.has(n.firstMet)) problems.push(`line ${n.line}: ${n.id} is "First met" in unknown week ${n.firstMet}`);
   }
   // A formal cycle can only be a cycle through every route of each node on it
   // to be fatal, but even one cyclic route is a modelling error worth flagging.
@@ -246,9 +260,10 @@ export function validateTerritory(t: Territory, prework?: PreworkIndex): string[
   return problems;
 }
 
-/** The handout week a node is first met in: its earliest citation. */
+/** The handout week a node is first met in: its earliest citation, or its "First met" week if earlier. */
 export function firstWeek(n: TerritoryNode, weekRank: Map<string, number>): number | undefined {
-  const ranks = n.prework.map((p) => weekRank.get(p.split('/')[0])).filter((r): r is number => r !== undefined);
+  const weeks = [...n.prework.map((p) => p.split('/')[0]), ...(n.firstMet ? [n.firstMet] : [])];
+  const ranks = weeks.map((w) => weekRank.get(w)).filter((r): r is number => r !== undefined);
   return ranks.length ? Math.min(...ranks) : undefined;
 }
 
@@ -270,7 +285,8 @@ function orderProblems(t: Territory, ids: Map<string, TerritoryNode>, prework: P
     }
     const late = n.routes.map((r) =>
       r.needs.filter((need) => {
-        const w = need.kind === 'formal' ? firstWeek(ids.get(need.node)!, prework.weekRank) : undefined;
+        const other = ids.get(need.node); // unknown ids are reported above
+        const w = need.kind === 'formal' && other ? firstWeek(other, prework.weekRank) : undefined;
         return w !== undefined && w > week;
       }),
     );

@@ -17,7 +17,11 @@ export default function TutorPage() {
   const [handle, setHandle] = useState(st.handle);
   const [goal, setGoal] = useState(st.goal);
   const [background, setBackground] = useState(st.background);
-  const slug = handle.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+  const rawSlug = handle.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
+  // learners/TEMPLATE.md is learning-edge's own file; on a case-insensitive
+  // filesystem (macOS default) "template.md" would replace it.
+  const reserved = rawSlug === 'template';
+  const slug = reserved ? '' : rawSlug;
   const reported = Object.keys(st.holdings).length;
   const zipName = `prework-studio-${slug || 'student'}.zip`;
 
@@ -83,9 +87,14 @@ export default function TutorPage() {
           disabled={!slug}
           onClick={save}
         />
-        {!slug && <p className="text-xs text-ink-400">Enter a handle first.</p>}
+        {!slug && <p className="text-xs text-ink-400">{reserved ? '"template" is taken by the tutor\'s own file; choose another handle.' : 'Enter a handle first.'}</p>}
         <p>From inside the clone (adjust the path to wherever your browser saved it):</p>
-        <Cmd text={`unzip -o ~/Downloads/${zipName}`} />
+        <Cmd text={`unzip -n ~/Downloads/${zipName}`} />
+        <p className="text-xs text-ink-400">
+          <code>-n</code> never overwrites: if you already ran <code>/setup</code>, the tutor's copy of your profile (with what it has
+          observed since) is kept. If your browser unpacked the zip for you, copy <strong>both</strong> folders,{' '}
+          <code>territories/</code> and <code>learners/</code>, into the clone; the profile alone sends the tutor off to rebuild the map.
+        </p>
         <p className="flex items-start gap-2 rounded-lg border border-amber2-500/25 bg-amber2-500/[0.06] px-3 py-2 text-xs text-amber2-200">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
           The profile tells the tutor setup is not finished: it still runs its knowledge interview. Your self-report is a starting point

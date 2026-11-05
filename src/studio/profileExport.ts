@@ -7,12 +7,13 @@
 // `done` would let claimed grades pick lesson targets, the wrong-altitude
 // failure the tutor exists to prevent.
 //
-// Where it resumes depends on the goal, which learning-edge insists is the
-// learner's own ("Do not suggest one"):
-//  - no goal typed in the studio → step 2: the tutor asks for it;
-//  - a goal typed → step 3: the tutor decides, silently, whether the shipped
-//    prework map serves THAT goal or builds one. The studio never records the
-//    map as chosen; /setup reads a named-but-missing map as an interrupted build.
+// It resumes at step 2 (goal + background) either way, so the tutor still
+// sharpens a vague goal and asks how they like to work; the goal is the
+// learner's own words or left for the tutor to ask ("Do not suggest one"). The
+// status line says the profile already exists, because step 2 otherwise starts
+// by copying TEMPLATE.md over it. Step 3 then decides, silently, whether the
+// shipped prework map serves THAT goal or builds one. The studio never records
+// the map as chosen; /setup reads a named-but-missing map as an interrupted build.
 // The map and the profile ship in one zip (see TutorPage), so the map is in
 // `territories/` whenever the profile is in `learners/`.
 
@@ -44,9 +45,12 @@ export function profileMarkdown(s: LearnerState, t: Territory, content: PreworkC
         (h.note ? ` Their note: “${h.note.replace(/\s+/g, ' ').trim()}”` : ''),
     );
   const goal = s.goal.replace(/\s+/g, ' ').trim();
-  const status = goal
-    ? `in-progress — next: step 3 (map: decide whether \`${TUTOR_MAP_PATH}\`, shipped gated by the Prework Studio for the prework, serves this goal; if not, build one) · install check: not yet run`
-    : 'in-progress — next: step 2 (goal — not given in the studio; handle and background below) · install check: not yet run';
+  const status =
+    'in-progress — next: step 2 (this profile was created by the Prework Studio, so do not re-copy the template; ' +
+    (goal ? 'goal recorded below, sharpen it if vague' : 'goal not given, ask for it') +
+    '; working style not asked; then step 3 decides whether the shipped, gated `' +
+    TUTOR_MAP_PATH +
+    '` serves the goal) · install check: not yet run';
 
   const byWeek = new Map<string, string[]>();
   for (const [item, st] of Object.entries(s.items)) {

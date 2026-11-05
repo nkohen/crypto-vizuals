@@ -27,10 +27,11 @@ export default function HomePage() {
         </p>
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
           <a
-            href={next && started ? href.item(next.id) : href.week('1')}
+            href={!started ? href.week('1') : next ? href.item(next.id) : href.map()}
             className="inline-flex items-center gap-1.5 rounded-lg bg-accent-500/90 px-3.5 py-1.5 font-semibold text-white hover:bg-accent-400"
           >
-            {next && started ? <>Continue: {itemFullName(next.id)}</> : 'Start with Week 1'} <ArrowRight size={15} />
+            {!started ? 'Start with Week 1' : next ? <>Continue: {itemFullName(next.id)}</> : 'Through the last handout: review on the map'}{' '}
+            <ArrowRight size={15} />
           </a>
           <a href={href.map()} className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600/70 bg-ink-800/60 px-3.5 py-1.5 font-medium text-ink-100 hover:bg-ink-700/60">
             <Compass size={15} /> Open the map
@@ -53,7 +54,10 @@ export default function HomePage() {
           <ol className="grid gap-2 sm:grid-cols-2">
             {PREWORK.weeks.map((w) => {
               const p = weekProgress(st, w.id);
-              const topics = TERRITORY.nodes.filter((n) => n.prework.some((x) => x.startsWith(`${w.id}/`))).slice(0, 4);
+              // What this week introduces: nodes the handouts first reach here.
+              const rank = PREWORK.weeks.indexOf(w);
+              const introduced = TERRITORY.nodes.filter((n) => weekOf(n) === rank);
+              const topics = introduced.slice(0, 4);
               return (
                 <li key={w.id}>
                   <a href={href.week(w.id)} className="block h-full rounded-xl border border-ink-700/60 bg-ink-900/50 px-4 py-3 hover:border-accent-500/40 hover:bg-ink-900">
@@ -79,6 +83,9 @@ export default function HomePage() {
                             {rich(n.title)}
                           </span>
                         ))}
+                        {introduced.length > topics.length && (
+                          <span className="px-1 py-px text-[10px] text-ink-500">+{introduced.length - topics.length} more</span>
+                        )}
                       </div>
                     )}
                   </a>

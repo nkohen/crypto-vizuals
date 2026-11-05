@@ -97,9 +97,17 @@ lines, and `**Route:**` blocks with `formal ← `/`informal ← ` needs (`src/te
 numbers). An HTML comment at the top of the file states the shape for anyone editing it on the tutor's side.
 Besides references and cycles, `check:tex` enforces two rules that make the map usable next to the handouts:
 - **anchored**: every node cites at least one handout item or figure;
-- **reachable in the handouts' order**: every node has a route whose formal needs are all first cited no later than
+- **reachable in the handouts' order**: every node has a route whose formal needs are all first met no later than
   the node itself. A formal need that the handouts only reach later contradicts the legend ("cannot state it *as the
   handouts first state it*").
+
+"First met" is a node's earliest cited item, or an explicit `**First met:** Week <id> — where` line when the
+handouts introduce it in prose before any item cites it (`omdl`, in Week 2a's worked example). It is a proxy: it
+catches the cross-week form of the original bug, not a same-week formal need introduced after the node, and it can't
+read prose that the map does not record. The same week is used to order candidates and to list what each week
+introduces on the Home page. Where a node is first *stated* loosely and later made *rigorous* (`dh-assumptions`,
+`prg-stream-cipher`), it has one route for each, so the rigorous formal dependency is recorded without blocking the
+first pass.
 **Dependencies are per route**, following learning-edge's accepted claim that "a dependency belongs to a path, not a
 concept pair": a node reachable two ways (Schnorr security via the AGM, or via the forking lemma) gets two routes.
 **Cost:** map authors must keep to the shape. A free-form edit, for instance by learning-edge's researcher reusing
@@ -129,7 +137,8 @@ A node is listed when it is not held and **some route's formal needs** are all h
 nodes are listed comes from the claims alone, as learning-edge's rule that the edge is derived from graded state
 requires. The **order** is the week the handouts first reach a node, then fewest unclaimed informal needs, and each
 entry names the intuition still missing. Sorting by handout week is curriculum order, which learning-edge's selector
-never uses to pick a lesson. The studio uses it only to sort a list, never to hide an entry, because the first version
+never uses to pick a lesson. The studio uses it only to sort a list, never to drop an entry (the Map page lists all of them; Home shows the
+first six and links to the rest), because the first version
 put Week 7 topics at the top of a Week 2 student's list, and a student reads the top of a list as advice. The Home page
 also shows **Next in the handouts** (the first item not yet marked done), labelled as plain handout order.
 This is deliberately weaker than learning-edge's selector (`tutor/edge.py`): it ignores the apply/generalize
@@ -143,16 +152,18 @@ prework would want a different one.
 interview always runs. Marking it `done` would let claimed grades pick lesson targets: the wrong-altitude failure the
 tutor exists to prevent. Where it resumes depends on the goal, because learning-edge says "the goal is theirs. Do not
 suggest one":
-- **No goal typed** in the studio: `next: step 2 (goal)`, and the tutor asks for it.
-- **A goal typed** (in the student's words, on the Tutor page): `next: step 3`, and the tutor decides, silently,
-  whether the shipped prework map serves *that* goal or builds another.
+It resumes at **step 2** either way, so the tutor still sharpens a vague goal and asks how they like to work. The goal
+is the student's own words from the Tutor page, or, if left empty, the tutor asks for it. The status line says the
+profile already exists, because step 2 otherwise begins by copying `TEMPLATE.md` over it. Step 3 then decides,
+silently, whether the shipped prework map serves *that* goal or builds another.
 
 The profile never records the map as chosen. `/setup` reads a profile naming a map that is missing as an interrupted
 build and silently restarts it, so the map and the profile ship together in **one zip** that unzips into the clone
 (decision 17). The handouts' notation is passed along as a comment, not as a voiced process ask. A self-reported "not
 yet" is written out in words, not as the template's **absent** (which means *probed*).
-**Cost:** a student who self-reported carefully still sits the 15-minute interview, and one who leaves the goal empty
-answers that question again.
+**Cost:** a student who self-reported carefully still sits the 15-minute interview and the goal questions. The
+resume relies on the tutor reading a free-text note in the status line ("do not re-copy the template"), which is a
+convention, not something `/setup` is written to honour.
 
 ### 12. A walk-through that answers an exercise opens only after the exercise is attempted — *default (the handouts' own rule)*
 The original Week 2 handout (`Week2.tex`, superseded by 2a/2b and not shown in the studio) says "once you have
@@ -179,7 +190,11 @@ either side changes.
 right with `A` inside, one wire per message), with the EUF-CMA game and the reduction as pseudocode. It shows the
 studio's core move: a handout figure gets a "step through this" link. Its TikZ/LaTeX export works like the original
 proof's. Circle captions (the handout's "prepend 0 bit") are now drawn in the viewer and the TikZ export alike; they
-were silently dropped before, which also hid captions such as "seed length" in the stream-cipher proof.
+were silently dropped before. Showing them exposed two layout problems in the original stream-cipher proof, fixed
+with it: step 1 drew the seed *length* as the value sent into $G$ (the circles are now $s$ and $G(s)$, with their
+lengths as captions), and in steps 7–10 the `y` circle sat on B's inner box and the two wires between B and A
+overlapped their labels (they now run on separate tracks, and step 8's output wire no longer crosses A). The diagram
+note is drawn below the diagram, not over it, after it was found hiding the forgery's translation in steps 5–9.
 **Cost:** a hand-laid diagram, and one more proof to keep faithful.
 
 ### 15. The studio is the root page; ReductionLab is a route — *default*
@@ -195,7 +210,10 @@ legibility won.
 
 ### 17. The tutor hand-off is one zip and a few commands, not an embedded chat — *forced (learning-edge runs in Claude Code on the learner's machine)*
 The Tutor page gives the clone command, a form (handle, goal in the student's own words, background), one zip holding
-`territories/crypto-camp-prework.md` and `learners/<handle>.md`, the `unzip` command, and `/setup`. One download, not
+`territories/crypto-camp-prework.md` and `learners/<handle>.md`, the `unzip -n` command (never overwrite: a re-export
+after `/setup` must not wipe the tutor's own profile), a note for browsers that unpack zips themselves (copy *both*
+folders), and `/setup`. The handle `template` is refused: on macOS's case-insensitive filesystem it would replace
+learning-edge's `learners/TEMPLATE.md`. One download, not
 two, so the profile can never arrive without its map (decision 11). The zip is written by a short stored-only
 writer (`src/studio/zip.ts`), not a dependency. Every map node offers a `/lesson <node>` command to copy.
 **Cost:** it is one-way. What the tutor learns about the student does not flow back into the studio yet (see below).

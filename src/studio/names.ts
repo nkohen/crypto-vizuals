@@ -57,5 +57,6 @@ export function nextInHandouts(s: LearnerState) {
     if (s.items[i.id]) furthest = k;
   });
   // The furthest marked item itself, if only attempted, is where they are.
-  return work.slice(Math.max(furthest, 0)).find((i) => !finished(i.id)) ?? work.find((i) => !finished(i.id));
+  // Nothing unfinished after it: they have reached the end (undefined).
+  return work.slice(Math.max(furthest, 0)).find((i) => !finished(i.id));
 }

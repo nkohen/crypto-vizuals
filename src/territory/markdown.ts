@@ -4,22 +4,18 @@
 // Block format, so math in the map renders through the same KaTeX path.
 import type { Block } from '../prework/types';
 
-// Math is split out first and passed through untouched, so `$m^*$ … $\sigma^*$`
-// is not read as an italic span.
-const MATH_RE = /(\$\$[\s\S]+?\$\$|\$[^$\n]+\$)/;
+// Math is swapped for placeholders first and restored after, so `$m^*$ … $\sigma^*$`
+// is not read as an italic span, while `*see $x$*` still is one.
+const MATH_RE = /\$\$[\s\S]+?\$\$|\$[^$\n]+\$/g;
 
 export function mdInline(s: string): string {
-  return s
-    .split(MATH_RE)
-    .map((part, i) =>
-      i % 2
-        ? part
-        : part
-            .replace(/`([^`]+)`/g, '<code>$1</code>')
-            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-            .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>'),
-    )
-    .join('');
+  const math: string[] = [];
+  const held = s.replace(MATH_RE, (m) => `\uE000${math.push(m) - 1}\uE001`);
+  return held
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>')
+    .replace(/\uE000(\d+)\uE001/g, (_, i) => math[Number(i)]);
 }
 
 export function mdToBlocks(md: string): Block[] {

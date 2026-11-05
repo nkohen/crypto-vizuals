@@ -280,6 +280,12 @@ function NodePanel({ node, candidate }: { node: TerritoryNode; candidate: boolea
       {node.prework.length > 0 && (
         <>
           <h3 className="mt-4 text-[11px] font-semibold uppercase tracking-wider text-ink-400">In the handouts</h3>
+          {node.firstMet && (
+            <p className="mt-1.5 text-xs text-ink-300">
+              First met in Week {node.firstMet}
+              {node.firstMetWhere && <>: {rich(node.firstMetWhere)}</>}
+            </p>
+          )}
           <ul className="mt-1.5 space-y-1">
             {node.prework.map((p) => (
               <li key={p} className="flex items-center gap-2 text-xs">

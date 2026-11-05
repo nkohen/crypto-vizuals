@@ -1,7 +1,7 @@
 # Territory map — Cryptography Camp prework
 
 <!-- Shape: the Prework Studio parses this file. Keep every node as "### `id` · Title", prose, then
-"- **Prework:**" and "- **Route:**" bullets with indented "formal ← `id` — why" / "informal ← `id` — why" needs,
+"- **Prework:**", optional "- **First met:** Week <id> — where", and "- **Route:**" bullets with indented "formal ← `id` — why" / "informal ← `id` — why" needs,
 under a lettered "## X. Section". Check edits with `npm run check:tex` in crypto-vizuals. -->
 
 *A territory map: what there is to learn on the way to a goal, and how each piece depends on the
@@ -141,11 +141,16 @@ A function is negligible if it eventually stays below $1/p(\lambda)$ for every p
 The DL, CDH and DDH assumptions each say that every efficient adversary has negligible advantage in its game: compute $x$ from $g^x$; compute $g^{xy}$ from $g^x, g^y$; tell $g^{xy}$ apart from a random element. As hardness statements they form a chain, DDH-hard $\Rightarrow$ CDH-hard $\Rightarrow$ DL-hard, so DDH is the strongest of the three assumptions.
 
 - **Prework:** `2a/exercise-4`, `3/exercise-3`
-- **Route:** Hardness assumptions as games
+- **Route:** As Week 2a states them ("negligible" read informally)
   - formal ← `attack-games` — each assumption is a statement about a game's advantage
   - formal ← `diffie-hellman-elgamal` — CDH and DDH are about the Diffie–Hellman shared secret
   - formal ← `proof-by-reduction` — the relations between assumptions are proved in contrapositive form
-  - informal ← `asymptotic-security` — each assumption says every efficient adversary's advantage is negligible; Week 2a reads "negligible" informally, and Week 3 makes it exact and asks you to re-check these reductions with it (`3/exercise-3`)
+  - informal ← `asymptotic-security` — each assumption says every efficient adversary's advantage is negligible; Week 2a reads "negligible" informally
+- **Route:** Made rigorous (Week 3, `3/exercise-3`)
+  - formal ← `attack-games` — each assumption is a statement about a game's advantage
+  - formal ← `diffie-hellman-elgamal` — CDH and DDH are about the Diffie–Hellman shared secret
+  - formal ← `proof-by-reduction` — the relations between assumptions are proved in contrapositive form
+  - formal ← `asymptotic-security` — the re-check uses the exact definition of negligible
 
 ### `one-time-pad` · The distinguishing game and the one-time pad
 In the cipher-distinguishing game, the adversary chooses two messages and must tell which one a challenge ciphertext encrypts. The one-time pad $E(k, m) = k \oplus m$ achieves advantage exactly $0$, which is called perfect secrecy. Shannon showed that perfect secrecy requires keys at least as long as messages, and that is what motivates pseudo-random generators.
@@ -160,12 +165,18 @@ In the cipher-distinguishing game, the adversary chooses two messages and must t
 A pseudo-random generator (PRG) deterministically stretches a short seed into a longer string. Its security is a distinguishing game, which the prework asks you to write yourself. The stream cipher $E_G(k, m) = G(k) \oplus m$ is the one-time pad with a stretched key. "Secure PRG $\Rightarrow$ secure stream cipher" is the course's first proof that a scheme is secure under an assumption about a primitive, and it is possible only because security asks for negligible advantage rather than zero.
 
 - **Prework:** `2b/exercise-7`, `2b/exercise-8`, `3/exercise-3`
-- **Route:** Stretching the pad's key
+- **Route:** As Week 2b states it ("negligible" read informally)
   - formal ← `attack-games` — the PRG game is modeled on the games already seen
   - formal ← `one-time-pad` — the stream cipher is the pad with a stretched key, and its security uses the same distinguishing game
   - formal ← `proof-by-reduction` — the theorem is proved in contrapositive form
   - formal ← `finite-probability` — the reduction's advantage has to be computed, not just asserted
-  - informal ← `asymptotic-security` — "not negligible in, not negligible out"; Week 2b reads "negligible" informally, and Week 3 makes it exact and asks you to re-check this reduction with it (`3/exercise-3`)
+  - informal ← `asymptotic-security` — "not negligible in, not negligible out"; Week 2b reads "negligible" informally
+- **Route:** Made rigorous (Week 3, `3/exercise-3`)
+  - formal ← `attack-games` — the PRG game is modeled on the games already seen
+  - formal ← `one-time-pad` — the stream cipher is the pad with a stretched key, and its security uses the same distinguishing game
+  - formal ← `proof-by-reduction` — the theorem is proved in contrapositive form
+  - formal ← `finite-probability` — the reduction's advantage has to be computed, not just asserted
+  - formal ← `asymptotic-security` — the re-check uses the exact definition of negligible
 
 ## F. Signatures and idealized models
 
@@ -332,6 +343,7 @@ A Pedersen commitment $C = g^x h^y$ hides $x$ perfectly, and it is computational
 In the OMDL game, the adversary gets $k$ challenges $g^{x_1}, \dots, g^{x_k}$ and may call a discrete-log oracle $k-1$ times, and it must output all $k$ logs. Week 2a's worked example shows OMDL-hard $\Rightarrow$ DL-hard, so OMDL is the stronger assumption. Komlo's note, quoted in Week 5, describes OMDL as useful when the reduction has to pick a commitment $R$ before it knows the challenge, as in threshold or blind signatures. In this course, though, MuSig and FROST are proved under DL, and MuSig2 is proved under AOMDL.
 
 - **Prework:** `5/reading-4`
+- **First met:** Week 2a — the worked example in "Proof by reduction", before any exercise
 - **Route:** DL with a helper oracle
   - formal ← `dh-assumptions` — OMDL extends the DL game with a discrete-log oracle
   - formal ← `proof-by-reduction` — OMDL-hard ⇒ DL-hard is proved in contrapositive form (Week 2a worked example)
@@ -472,7 +484,7 @@ FROST (Komlo–Goldberg) lets any $t$ of $n$ key holders produce an ordinary Sch
 - **Notation drifts across readings.** The course uses $\lambda$ for the security parameter, Katz–Lindell use $n$, and Bellare–Palacio use $k$. The course's distinguishing advantage is the signed $\pr{\text{win}} - \tfrac{1}{2}$. Boneh–Shoup's two-experiment advantage $\lvert \pr{W_0} - \pr{W_1} \rvert$ is twice its absolute value. Search-game and EUF-CMA advantages have no $-\tfrac{1}{2}$.
 - **Three routes to Schnorr EUF-CMA. Do not collapse them.** The AGM route still uses the ROM. The forking-lemma route is explicitly asked to avoid invoking Fiat–Shamir, so `fiat-shamir` is informal on that route only.
 - **"Algebraic" in AOMDL is not the AGM.** The handout quotes MuSig2 on this: it is a restriction on the reduction, orthogonal to the AGM. The edge is informal on purpose.
-- **Rigor comes in two passes.** Weeks 2a/2b use "negligible" and $\pr{\cdot}$ informally; Week 2b defines probability and Week 3 defines negligible, and `3/exercise-3` asks for the Week 2 reductions to be re-checked with the exact definition. So `dh-assumptions` and `prg-stream-cipher` need `asymptotic-security` only informally, and `attack-games` needs `finite-probability` only informally: that is how the handouts first state them. A learner who has done `3/exercise-3` holds the rigorous version; one on a Week 2a/2b exercise holds the informal reading ("unbelievably small").
+- **Rigor comes in two passes.** Weeks 2a/2b use "negligible" and $\pr{\cdot}$ informally; Week 2b defines probability and Week 3 defines negligible, and `3/exercise-3` asks for the Week 2 reductions to be re-checked with the exact definition. So `dh-assumptions` and `prg-stream-cipher` each have two routes: as first stated (informal ← `asymptotic-security`) and made rigorous (formal ← `asymptotic-security`). These are two levels of rigour on one path, not different proofs, recorded so the rigorous dependency is not lost. `attack-games` needs `finite-probability` only informally. A learner who has done `3/exercise-3` holds the rigorous version; one on a Week 2a/2b exercise holds the informal reading ("unbelievably small").
 - **Granted facts.** Several exercises explicitly grant facts proved later (independence products and squares of non-negligible functions in `2a/exercise-4`; halves of non-negligible functions in `2b/exercise-8`). Treat these as named imports, not as things the learner has earned.
 - **Informal concepts to model, not drop:** the magic box; the box-within-a-box picture (`reduction-diagrams`); why adversaries are PPT; why ROM query reporting and programming matter; why an honest verifier is a fair assumption for Sigma protocols; Shannon's bound as the motivation for PRGs; birthday paradox to collisions.
 - **Some exercises build on earlier ones** even where the concept edge is informal: `5/exercise-2` starts from `5/exercise-1`; `6/exercise-1` uses the OR construction from `5/reading-3`; `5/exercise-6` reworks the reduction of `5/reading-4`.
@@ -516,6 +528,9 @@ the ROM. Fixed in this file:
 - `attack-games`, `schnorr-signature-scheme`, `reduction-diagrams` and `omdl` cited no handout item, so a student
   working from the handouts never met them. They now cite `2a/figure-1`, `2a/exercise-3`, `3/figure-3` and
   `5/reading-4`.
+- A second review (same day) asked for the rigorous dependency back: both nodes now carry a second route, "Made
+  rigorous (Week 3)", with the formal edge, beside the route as first stated. `omdl` records that it is first met in
+  Week 2a's worked example (a **First met** line), since no Week 2a item cites it.
 - Two mechanical checks now guard these (the studio's `npm run check:tex`): every node cites a handout item, and
   every node has a route whose formal needs are all first cited no later than the node itself.
 
