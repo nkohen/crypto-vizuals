@@ -25,8 +25,10 @@ export interface BaseEntity {
   /** Optional parent box id, for the "boxes within boxes" nesting. */
   parent?: string;
   label: string;
-  /** A short caption shown beneath the entity when highlighted. */
+  /** A short caption: inside a box under its header; beneath a circle. */
   caption?: string;
+  /** Circles only: put the caption above instead (when a wire leaves from the bottom). */
+  captionAbove?: boolean;
   /** Whether this entity is active (lit up) in the current step. */
   active?: boolean;
   /** Whether this entity was just introduced this step. */

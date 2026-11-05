@@ -4,21 +4,26 @@ import { PREWORK } from '../prework/content';
 import { TERRITORY, TERRITORY_SOURCE } from '../territory';
 import { learner, useLearner } from './learner';
 import { profileMarkdown, TUTOR_MAP_PATH } from './profileExport';
+import { zipFiles } from './zip';
 
 /**
  * The bridge to learning-edge. The tutor runs inside Claude Code on the
- * learner's machine, not in this page, so the hand-off is two files and a few
- * commands: the pre-computed map, and a profile that resumes /setup at the
- * knowledge interview.
+ * learner's machine, not in this page, so the hand-off is one zip (the
+ * pre-computed map and a profile that resumes /setup before its knowledge
+ * interview) and a few commands.
  */
 export default function TutorPage() {
   const st = useLearner();
   const [handle, setHandle] = useState(st.handle);
+  const [goal, setGoal] = useState(st.goal);
   const [background, setBackground] = useState(st.background);
   const slug = handle.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-|-$/g, '');
   const reported = Object.keys(st.holdings).length;
+  const zipName = `prework-studio-${slug || 'student'}.zip`;
 
-  const save = () => learner.setProfile(slug, background);
+  const save = () => learner.setProfile(slug, goal, background);
+  const field =
+    'mt-1 w-full rounded-md border border-ink-600/70 bg-ink-900 px-2 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:border-accent-500/60 focus:outline-none';
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -29,8 +34,8 @@ export default function TutorPage() {
             learning-edge
           </a>{' '}
           is an inquiry-based tutor that runs in Claude Code. It interviews you to find what you already hold, then teaches at the edge
-          of it by having you work examples and discover results yourself. Normally it builds a map of your goal during setup; for the
-          prework, that map is already built — the one in this studio.
+          of it by having you work examples and discover results yourself. During setup it builds a map of your goal; if your goal is
+          the prework, the map in this studio is already built and checked, and it comes with your files.
         </p>
       </header>
 
@@ -38,65 +43,86 @@ export default function TutorPage() {
         <Cmd text="git clone https://github.com/nkohen/learning-edge-tutor.git && cd learning-edge-tutor" />
       </Step>
 
-      <Step n={2} title="Add the prework map">
-        <p>
-          Save the map as <code className="text-accent-300">{TUTOR_MAP_PATH}</code> inside the clone. It is the same file this studio
-          draws, with its audit trail.
-        </p>
-        <DownloadButton name="crypto-camp-prework.md" text={TERRITORY_SOURCE} label={`Download the map (${TERRITORY.nodes.length} nodes)`} />
-      </Step>
-
-      <Step n={3} title="Add your profile">
+      <Step n={2} title="Tell it who you are">
         <div className="grid gap-3 sm:grid-cols-[180px_1fr]">
           <label className="text-xs text-ink-300">
             Handle (file name)
-            <input
-              value={handle}
-              onChange={(e) => setHandle(e.target.value)}
-              onBlur={save}
-              placeholder="e.g. sam"
-              className="mt-1 w-full rounded-md border border-ink-600/70 bg-ink-900 px-2 py-1.5 text-sm text-ink-100 placeholder:text-ink-500 focus:border-accent-500/60 focus:outline-none"
-            />
+            <input value={handle} onChange={(e) => setHandle(e.target.value)} onBlur={save} placeholder="e.g. sam" className={field} />
           </label>
           <label className="text-xs text-ink-300">
+            What do you want to understand? (optional; in your own words)
+            <textarea value={goal} onChange={(e) => setGoal(e.target.value)} onBlur={save} rows={2} className={field} />
+          </label>
+          <span className="hidden sm:block" />
+          <label className="text-xs text-ink-300">
             Background (optional: what you study or do, how you like to learn)
-            <textarea
-              value={background}
-              onChange={(e) => setBackground(e.target.value)}
-              onBlur={save}
-              rows={2}
-              className="mt-1 w-full rounded-md border border-ink-600/70 bg-ink-900 px-2 py-1.5 text-sm text-ink-100 focus:border-accent-500/60 focus:outline-none"
-            />
+            <textarea value={background} onChange={(e) => setBackground(e.target.value)} onBlur={save} rows={2} className={field} />
           </label>
         </div>
+        <p className="text-xs text-ink-400">
+          Leave the goal empty and the tutor will ask you for it. Either way it decides for itself whether this studio's map fits your
+          goal.
+        </p>
+      </Step>
+
+      <Step n={3} title="Download your files and unzip them into the clone">
         <p>
-          Save it as <code className="text-accent-300">learners/{slug || '<handle>'}.md</code>. It carries your goal, the map's path,
-          your prework progress and the {reported} self-report{reported === 1 ? '' : 's'} you made on the map, each marked{' '}
-          <em>(claimed)</em>.
+          One zip with two files: <code className="text-accent-300">{TUTOR_MAP_PATH}</code> (the map, {TERRITORY.nodes.length} nodes,
+          with its audit trail) and <code className="text-accent-300">learners/{slug || '<handle>'}.md</code> (your profile: your goal,
+          your prework progress and the {reported} self-report{reported === 1 ? '' : 's'} you made on the map, each marked as a claim).
         </p>
         <DownloadButton
-          name={`${slug || 'student'}.md`}
-          text={() => profileMarkdown({ ...st, handle: slug, background }, TERRITORY, PREWORK)}
-          label="Download your profile"
+          name={zipName}
+          make={() =>
+            zipFiles([
+              { path: TUTOR_MAP_PATH, text: TERRITORY_SOURCE },
+              { path: `learners/${slug}.md`, text: profileMarkdown({ ...st, handle: slug, goal, background }, TERRITORY, PREWORK) },
+            ])
+          }
+          label="Download"
           disabled={!slug}
           onClick={save}
         />
+        {!slug && <p className="text-xs text-ink-400">Enter a handle first.</p>}
+        <p>From inside the clone (adjust the path to wherever your browser saved it):</p>
+        <Cmd text={`unzip -o ~/Downloads/${zipName}`} />
         <p className="flex items-start gap-2 rounded-lg border border-amber2-500/25 bg-amber2-500/[0.06] px-3 py-2 text-xs text-amber2-200">
           <AlertTriangle size={14} className="mt-0.5 shrink-0" />
-          The profile tells the tutor setup is still at the interview. Your self-report is a starting point for that interview, not a
-          replacement for it: the tutor never trusts a named background, and it probes before it teaches.
+          The profile tells the tutor setup is not finished: it still runs its knowledge interview. Your self-report is a starting point
+          for that interview, not a replacement for it. The tutor never trusts a named background, and it probes before it teaches.
         </p>
       </Step>
 
       <Step n={4} title="Start">
         <Cmd text="claude" />
         <p>
-          Then type <code className="text-accent-300">/setup</code>. It sees your profile, skips the questions already answered, and
-          picks up at the knowledge interview (about 15 minutes). After that, <code className="text-accent-300">/lesson</code> whenever
-          you want to learn something; from any node in the map you can copy a <code className="text-accent-300">/lesson …</code>{' '}
-          command that names it.
+          Then type <code className="text-accent-300">/setup</code>. It finds your profile, skips what is already answered, and continues
+          from there through the knowledge interview (about 15 minutes). After that, type <code className="text-accent-300">/lesson</code>{' '}
+          whenever you want to learn something. Any node on the map gives you a <code className="text-accent-300">/lesson …</code> command
+          that names it.
         </p>
       </Step>
+
+      <section className="rounded-2xl border border-ink-700/60 bg-ink-900/30 p-4 text-xs text-ink-400">
+        <h2 className="text-sm font-semibold text-ink-200">Your data in this studio</h2>
+        <p className="mt-1">
+          Everything you mark here (exercise status, claims, notes, this page's fields) stays in this browser. On a shared computer, clear
+          it when you're done.
+        </p>
+        <button
+          onClick={() => {
+            if (window.confirm('Clear all your progress, claims and notes from this browser? This cannot be undone.')) {
+              learner.reset();
+              setHandle('');
+              setGoal('');
+              setBackground('');
+            }
+          }}
+          className="mt-2 rounded-lg border border-rose2-500/40 px-3 py-1 text-xs font-medium text-rose2-300 hover:bg-rose2-500/10"
+        >
+          Clear my data
+        </button>
+      </section>
     </div>
   );
 }
@@ -137,13 +163,13 @@ function Cmd({ text }: { text: string }) {
 
 function DownloadButton({
   name,
-  text,
+  make,
   label,
   disabled,
   onClick,
 }: {
   name: string;
-  text: string | (() => string);
+  make: () => Uint8Array;
   label: string;
   disabled?: boolean;
   onClick?: () => void;
@@ -153,8 +179,7 @@ function DownloadButton({
       disabled={disabled}
       onClick={() => {
         onClick?.();
-        const body = typeof text === 'function' ? text() : text;
-        const url = URL.createObjectURL(new Blob([body], { type: 'text/markdown' }));
+        const url = URL.createObjectURL(new Blob([make() as BlobPart], { type: 'application/zip' }));
         const a = document.createElement('a');
         a.href = url;
         a.download = name;
@@ -163,7 +188,7 @@ function DownloadButton({
       }}
       className="inline-flex items-center gap-1.5 rounded-lg bg-accent-500/90 px-3 py-1.5 text-sm font-semibold text-white hover:bg-accent-400 disabled:cursor-not-allowed disabled:opacity-40"
     >
-      <Download size={14} /> {label}
+      <Download size={14} /> {label} <span className="font-normal opacity-80">({name})</span>
     </button>
   );
 }

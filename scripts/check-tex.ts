@@ -10,11 +10,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { parseTerritory, validateTerritory } from '../src/territory/parse';
 import { mdToBlocks } from '../src/territory/markdown';
 import { PROOF_LINKS } from '../src/studio/links';
+import { FIGURE_DESCRIPTIONS } from '../src/studio/figureText';
 import { PROOFS } from '../src/proofs';
 import { PC_MACROS } from '../src/pcMacros';
 import { RICH_TEXT_TOKEN_RE } from '../src/richTextTokens';
 import type { Block } from '../src/prework/types';
-import { PREWORK, PREWORK_MACROS } from '../src/prework/content';
+import { PREWORK, PREWORK_INDEX, PREWORK_MACROS } from '../src/prework/content';
 
 const errors: string[] = [];
 let checked = 0;
@@ -95,13 +96,15 @@ function blocks(bs: Block[], where: string) {
 for (const w of PREWORK.weeks) blocks(w.blocks, `week ${w.id}`);
 
 // --- studio links: every linked proof and item exists ------------------------
-const itemIds = new Set(PREWORK.items.map((i) => i.id));
-const figureIdsAll = new Set(PREWORK.weeks.flatMap((w) => w.blocks.filter((b) => b.kind === 'figure').map((b) => (b as { id: string }).id)));
 for (const l of PROOF_LINKS) {
   if (!PROOFS[l.proof]) errors.push(`links: unknown proof ${l.proof}`);
-  for (const i of [...l.items, ...l.gate]) if (!itemIds.has(i) && !figureIdsAll.has(i)) errors.push(`links: unknown item ${i}`);
+  for (const i of [...l.items, ...l.gate]) if (!PREWORK_INDEX.citable.has(i)) errors.push(`links: unknown item ${i}`);
   rich(l.bridge, `links ${l.proof} bridge`);
 }
+
+// --- every pre-rendered (glyph-outline) figure has a text description --------
+for (const w of PREWORK.weeks)
+  for (const b of w.blocks) if (b.kind === 'figure' && b.svg && !FIGURE_DESCRIPTIONS[b.id]) errors.push(`${b.id}: SVG figure has no entry in src/studio/figureText.ts`);
 
 // --- the territory map: parses, references resolve, its math renders --------
 const MAP = 'content/territories/crypto-camp-prework.md';
@@ -109,7 +112,7 @@ if (!existsSync(MAP)) errors.push(`${MAP}: missing`);
 else {
   try {
     const t = parseTerritory(readFileSync(MAP, 'utf8'));
-    for (const p of validateTerritory(t, itemIds)) errors.push(`${MAP}: ${p}`);
+    for (const p of validateTerritory(t, PREWORK_INDEX)) errors.push(`${MAP}: ${p}`);
     rich(t.goal, `${MAP} goal`);
     rich(t.entryAssumptions, `${MAP} entry assumptions`);
     for (const n of t.nodes) {

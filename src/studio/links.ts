@@ -2,8 +2,9 @@
 // handout item, and when a student may see it.
 //
 // A walk-through that ANSWERS an exercise is gated on attempting that exercise
-// first — the handouts' own rule ("Once you have attempted Exercises …, you may
-// check your work by reading …"). A walk-through of a worked example the handout
+// first — the rule the original Week 2 handout (Week2.tex, superseded by 2a/2b)
+// gave for its check-your-work reading ("Once you have attempted Exercises …,
+// you may check your work by reading …"). A walk-through of a worked example the handout
 // already shows in full is never gated.
 
 export interface ProofLink {

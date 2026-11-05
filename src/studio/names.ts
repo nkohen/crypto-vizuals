@@ -41,3 +41,21 @@ export function weekProgress(s: LearnerState, week: string) {
 
 /** "Week 2b Exercise 7": unambiguous outside the item's own handout. */
 export const itemFullName = (id: string) => `Week ${id.split('/')[0]} ${itemName(id)}`;
+
+/**
+ * Where the student is in the handouts: the first exercise or reading after the
+ * furthest one they have marked that is not yet done (readings: read). Items
+ * skipped before that point are not dragged back up: optional readings are often
+ * skipped without being marked. Plain curriculum order — "where you are in the
+ * handouts", not a judgement about what you know.
+ */
+export function nextInHandouts(s: LearnerState) {
+  const work = PREWORK.items.filter((i) => i.env === 'exercise' || i.env === 'reading');
+  const finished = (id: string) => !!s.items[id] && (summaries.get(id)?.env === 'reading' || s.items[id].status === 'done');
+  let furthest = -1;
+  work.forEach((i, k) => {
+    if (s.items[i.id]) furthest = k;
+  });
+  // The furthest marked item itself, if only attempted, is where they are.
+  return work.slice(Math.max(furthest, 0)).find((i) => !finished(i.id)) ?? work.find((i) => !finished(i.id));
+}

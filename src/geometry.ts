@@ -145,6 +145,13 @@ export function boxCaptionCenter(e: BaseEntity): Point {
   };
 }
 
+/** Where a circle's caption sits: centred just below the circle (or above, with `captionAbove`). */
+export function circleCaptionCenter(e: BaseEntity): Point {
+  const b = entityBounds(e);
+  const off = b.w / 2 + 12;
+  return { x: b.x + b.w / 2, y: b.y + b.h / 2 + (e.captionAbove ? -off : off) };
+}
+
 /** Paint order: parents before children, then larger boxes before smaller ones. */
 export function paintOrder(entities: BaseEntity[]): BaseEntity[] {
   const arr = [...entities];

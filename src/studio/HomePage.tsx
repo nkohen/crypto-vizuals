@@ -1,20 +1,21 @@
-import { ArrowRight, Compass, PlayCircle, MessagesSquare, ExternalLink } from 'lucide-react';
+import { ArrowRight, Compass, PlayCircle, MessagesSquare, ExternalLink, BookOpenText } from 'lucide-react';
 import { PREWORK, PREWORK_MACROS } from '../prework/content';
-import { TERRITORY } from '../territory';
+import { TERRITORY, nodeById, weekOf } from '../territory';
 import { renderRichText } from '../richText';
 import { edgeCandidates, useLearner } from './learner';
-import { weekProgress } from './names';
+import { nextInHandouts, weekProgress, itemFullName } from './names';
 import { PROOF_LINKS } from './links';
 import { ProofLinkCard } from './Blocks';
-import { itemFullName } from './names';
 import { href } from './route';
 
 const rich = (t: string) => renderRichText(t, PREWORK_MACROS);
 
 export default function HomePage() {
   const st = useLearner();
-  const candidates = edgeCandidates(TERRITORY, st);
+  const candidates = edgeCandidates(TERRITORY, st, weekOf);
   const reported = Object.keys(st.holdings).length;
+  const next = nextInHandouts(st);
+  const started = Object.keys(st.items).length > 0;
   return (
     <div className="space-y-6">
       <section className="rounded-2xl border border-ink-700/60 bg-gradient-to-br from-ink-850 to-ink-900 p-5 sm:p-7">
@@ -25,8 +26,11 @@ export default function HomePage() {
           the learning-edge tutor.
         </p>
         <div className="mt-4 flex flex-wrap gap-2 text-sm">
-          <a href={href.week('1')} className="inline-flex items-center gap-1.5 rounded-lg bg-accent-500/90 px-3.5 py-1.5 font-semibold text-white hover:bg-accent-400">
-            Start with Week 1 <ArrowRight size={15} />
+          <a
+            href={next && started ? href.item(next.id) : href.week('1')}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-accent-500/90 px-3.5 py-1.5 font-semibold text-white hover:bg-accent-400"
+          >
+            {next && started ? <>Continue: {itemFullName(next.id)}</> : 'Start with Week 1'} <ArrowRight size={15} />
           </a>
           <a href={href.map()} className="inline-flex items-center gap-1.5 rounded-lg border border-ink-600/70 bg-ink-800/60 px-3.5 py-1.5 font-medium text-ink-100 hover:bg-ink-700/60">
             <Compass size={15} /> Open the map
@@ -85,29 +89,54 @@ export default function HomePage() {
         </section>
 
         <div className="space-y-4">
+          {next && started && (
+            <section className="rounded-2xl border border-ink-700/60 bg-ink-900/50 p-4">
+              <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-50">
+                <BookOpenText size={16} className="text-accent-300" /> Next in the handouts
+              </h2>
+              <a href={href.item(next.id)} className="mt-2 block rounded-lg border border-ink-600/60 px-3 py-2 text-xs text-ink-200 hover:border-accent-500/50">
+                <span className="font-medium text-ink-50">{itemFullName(next.id)}</span>
+                {st.items[next.id] && <span className="text-ink-400"> (attempted)</span>}
+                <span className="mt-0.5 line-clamp-2 text-ink-400">{rich(next.gist)}</span>
+              </a>
+              <p className="mt-1.5 text-[11px] text-ink-500">The first item after the furthest one you've marked that isn't done yet.</p>
+            </section>
+          )}
+
           <section className="rounded-2xl border border-ink-700/60 bg-ink-900/50 p-4">
             <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-50">
-              <Compass size={16} className="text-jade-400" /> Where you might be
+              <Compass size={16} className="text-jade-400" /> Reachable on the map
             </h2>
             {reported === 0 ? (
               <p className="mt-1 text-xs leading-relaxed text-ink-400">
-                Nothing reported yet. Open the map and mark how you hold the pieces you already know; candidates for what to work on
-                next appear here. They come from your self-report only, and the tutor checks them before teaching.
+                Nothing claimed yet. On the map, mark how you hold the pieces you already know; the pieces whose formal needs you've
+                claimed appear here. They come from your self-report only, and the tutor checks them before teaching.
               </p>
             ) : (
               <>
-                <p className="mt-1 text-xs text-ink-400">
-                  From your self-report ({reported} node{reported === 1 ? '' : 's'}): not yet held, formal needs in hand.
+                <p className="mt-1 text-xs leading-relaxed text-ink-400">
+                  Not yet claimed, but everything they need formally is ({reported} claim{reported === 1 ? '' : 's'} so far), earliest in
+                  the handouts first. A starting point, not a verdict.
                 </p>
-                <ul className="mt-2 flex flex-wrap gap-1.5">
-                  {candidates.slice(0, 8).map(({ node }) => (
+                <ul className="mt-2 space-y-1">
+                  {candidates.slice(0, 6).map(({ node, missingInformal }) => (
                     <li key={node.id}>
-                      <a href={href.map(node.id)} className="block rounded-md border border-dashed border-jade-500/40 px-2 py-0.5 text-xs text-ink-100 hover:bg-jade-500/10">
+                      <a href={href.map(node.id)} className="block rounded-md border border-dashed border-jade-500/40 px-2 py-1 text-xs text-ink-100 hover:bg-jade-500/10">
                         {rich(node.title)}
+                        {missingInformal.length > 0 && (
+                          <span className="block text-[11px] text-ink-400">
+                            intuition from: {missingInformal.map((id) => nodeById.get(id)?.title ?? id).join(', ')}
+                          </span>
+                        )}
                       </a>
                     </li>
                   ))}
                 </ul>
+                {candidates.length > 6 && (
+                  <a href={href.map()} className="mt-1.5 inline-block text-[11px] text-accent-300 hover:text-accent-200">
+                    All {candidates.length} on the map
+                  </a>
+                )}
               </>
             )}
           </section>

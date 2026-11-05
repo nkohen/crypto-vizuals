@@ -6,7 +6,7 @@ The Prework Studio is a prototype GUI for working through the
 1. **the handouts**: ingested from the prework's LaTeX, with readings and exercises as trackable cards;
 2. **ReductionLab** (this repo): step-through walk-throughs of reductions, linked from the handout items they belong to;
 3. **learning-edge** (`~/dev/learning-edge`): a **pre-computed territory map** for the prework, drawn in the studio and
-   shipped in the tutor's own file format, plus a hand-off to the tutor itself.
+   in a file the tutor can use as is, plus a hand-off to the tutor itself.
 
 Branch: `prework-studio` (built on `tikz-export-prototype`). Run `npm run dev`; the studio is the root page.
 
@@ -20,9 +20,9 @@ a one-line cost.
 ```
 cryptography-camp/prework (LaTeX)                learning-edge tutor (Claude Code, local)
         │  npm run ingest:prework                         ▲
-        ▼                                                 │ learner downloads two files:
+        ▼                                                 │ learner downloads ONE zip, unzips in the clone:
 src/prework/content.generated.json ──┐                    │   territories/crypto-camp-prework.md
-public/prework/figures/*.svg         │                    │   learners/<handle>.md  (setup resumes at interview)
+public/prework/figures/*.svg         │                    │   learners/<handle>.md  (setup resumes before the interview)
                                      ▼                    │
 content/territories/                Studio ───────────────┘
   crypto-camp-prework.md ─────────►  │  #/week/…  handouts, exercise status, map chips
@@ -42,6 +42,12 @@ it, so a student neither waits for `/setup` to build it nor gets a per-session, 
 three Schnorr routes SURVIVED, the AGM route NARROWED to algebraic forgers, and a factor-of-2 sentence in this
 studio's notation bridge REFUTED and fixed). Both verdicts are recorded in the map's `## Audit` and
 `## Adversarial ledger`.
+**Revised (2026-11-05)** after a fresh review checked the map against the handout sources. The claim-auditor's merge
+of two routes on `dh-assumptions` and `prg-stream-cipher` had made a Week 3 concept (negligible functions) a formal
+need of Week 2 nodes, and four nodes cited no handout item. Together these meant a student working the handouts in
+order never saw their current topics as reachable. Both are fixed, and both are now checked mechanically (decision 7).
+The lesson: gating the map's claims did not gate its *structure* against the handouts' order, and only the studio
+can check that, because only the studio knows the order.
 **Cost:** one map for every student, not organized around each one's own goal. `/setup` builds per-learner maps for
 a reason, and a student whose goal differs from "the prework" should still let the tutor build their own.
 
@@ -57,7 +63,8 @@ it records the prework commit, currently `fae4417`) and pre-renders TikZ figures
 PDFs are **linked** on GitHub at that commit, never copied: they are excerpts of third-party books and papers.
 **Cost:** the prework changing means re-running the ingest. The converter handles the LaTeX these handouts use, not
 LaTeX in general, and it fails loudly (unsupported command or environment, unresolved `\ref`, a reading PDF mapped
-to no reading) rather than guessing.
+to no reading) rather than guessing. (An unresolved `\ref` was only a warning until 2026-11-05. Making it fatal and
+re-running the ingest at `fae4417` reproduced the committed output byte for byte, so none was ever silently printed.)
 
 ### 4. Week 2 is ingested as the 2a/2b split, not `Week2.tex` — *default*
 The split is the elaborated version (same material plus warm-ups). **Cost:** the Boneh–Shoup "check your work" reading
@@ -71,7 +78,9 @@ walk-through fills that role.
 - The three TikZ/pgfplots figures (Week 3) are compiled from the **handout's own preamble** with pdflatex, then
   converted to SVG with pdftocairo. They are faithful by construction.
 
-**Cost:** the SVGs' text is glyph outlines, not text (the alt attribute carries the caption). Cryptocode's small caps
+**Cost:** the SVGs' text is glyph outlines, not text. Each one gets a hand-written description of what it shows
+(`src/studio/figureText.ts`; `check:tex` fails if one is missing), and that description goes in the `alt`
+attribute. Cryptocode's small caps
 for oracle names render upright, because KaTeX has no `\textsc`.
 
 ### 6. One macro table per body of content, checked — *default*
@@ -80,18 +89,29 @@ KaTeX receives the handouts' preamble macros (`\pr`, `\G`, `\Kpriv`, …) plus s
 fragment with errors on: proofs, handouts, link notes and the map. **Cost:** the stand-ins approximate cryptocode's
 typography (no small caps; `\game`'s optional arguments are fixed to their defaults, which no call site overrides).
 
-### 7. The map is a learning-edge file first; the studio reads a disciplined subset — *forced (decision 2) + default (the subset)*
-The file is a valid territory map: status header, formal/informal edges, routes, out-of-scope, sources, `## Audit`,
-`## Adversarial ledger`. The studio parses node headers, `**Prework:**` lines and `**Route:**` blocks with
-`formal ← `/`informal ← ` needs (`src/territory/parse.ts`; it errors with line numbers).
+### 7. The map is a learning-edge file first; the studio imposes its own stricter shape — *forced (decision 2) + default (the shape)*
+The file has everything learning-edge asks a territory map for: a status header, formal and informal edges, routes,
+out of scope, sources, `## Audit` and `## Adversarial ledger`. learning-edge itself prescribes no layout (its own shipped
+map is free-form bullets), so the **shape** the studio parses is the studio's invention: node headers, `**Prework:**`
+lines, and `**Route:**` blocks with `formal ← `/`informal ← ` needs (`src/territory/parse.ts`; it errors with line
+numbers). An HTML comment at the top of the file states the shape for anyone editing it on the tutor's side.
+Besides references and cycles, `check:tex` enforces two rules that make the map usable next to the handouts:
+- **anchored**: every node cites at least one handout item or figure;
+- **reachable in the handouts' order**: every node has a route whose formal needs are all first cited no later than
+  the node itself. A formal need that the handouts only reach later contradicts the legend ("cannot state it *as the
+  handouts first state it*").
 **Dependencies are per route**, following learning-edge's accepted claim that "a dependency belongs to a path, not a
 concept pair": a node reachable two ways (Schnorr security via the AGM, or via the forking lemma) gets two routes.
-**Cost:** map authors must keep to the subset. A free-form edit can break the parse, and the check then fails.
+**Cost:** map authors must keep to the shape. A free-form edit, for instance by learning-edge's researcher reusing
+nodes for a new map, can break the parse, and only this repo's `check:tex` would notice; the tutor never runs it.
 
 ### 8. The map is shown to students — *default; departs from learning-edge*
 The tutor treats map choice as private bookkeeping. Here the map *is* the navigation. To make that safe, the map was
 written under an extra constraint: node prose may say what a concept is and how it bears on another, never how to solve
 a prework exercise. The tutor's per-lesson **prep** (route surveys, answer keys) stays private inside the tutor.
+The page shows the nodes, their routes, Entry assumptions, Out of scope and Sources. It does **not** show the sections
+addressed to someone else: Notes for the tutor (which say what the tutor will probe for), the Audit and the
+Adversarial ledger. Those stay in the downloaded file.
 **Cost:** a student sees the whole territory at once, which can intimidate. It is also a second place where a
 spoiler could leak if the map is edited carelessly.
 
@@ -100,24 +120,43 @@ Grades are learning-edge's: self-derived, rebuilt, fact-held-why-not, granted, a
 entered in the studio is the learner's own claim, which is the rung learning-edge's selector deliberately does not
 trust. So the UI calls them claims, and the export marks each one **(claimed)**. Exercise status
 (not started / attempted / done) is tracked separately and **never** turned into a grade: finishing an exercise is not
-the same as knowing how you hold a concept. State lives in `localStorage` (and survives private-mode failures in memory).
+the same as knowing how you hold a concept. State lives in `localStorage` (and survives private-mode failures in memory). The Tutor page has a "Clear my data"
+button for shared computers.
 **Cost:** nothing syncs across devices, and nothing reaches the tutor until the student exports it.
 
-### 10. "Candidates", not "your edge" — *default (constrained by learning-edge's rule that the edge is derived from graded state, never curriculum order)*
-A node is a candidate when it is not held and **some route's formal needs** are all held. Informal needs never block.
+### 10. "Reachable from your claims", ordered by the handouts — *default (revised 2026-11-05)*
+A node is listed when it is not held and **some route's formal needs** are all held. Informal needs never block. Which
+nodes are listed comes from the claims alone, as learning-edge's rule that the edge is derived from graded state
+requires. The **order** is the week the handouts first reach a node, then fewest unclaimed informal needs, and each
+entry names the intuition still missing. Sorting by handout week is curriculum order, which learning-edge's selector
+never uses to pick a lesson. The studio uses it only to sort a list, never to hide an entry, because the first version
+put Week 7 topics at the top of a Week 2 student's list, and a student reads the top of a list as advice. The Home page
+also shows **Next in the handouts** (the first item not yet marked done), labelled as plain handout order.
 This is deliberately weaker than learning-edge's selector (`tutor/edge.py`): it ignores the apply/generalize
 distinction and probe-trust, because a self-report carries no probe. The UI says so wherever candidates appear.
 **Cost:** it can over-credit, which is exactly the failure learning-edge warns about ("never trust a named background").
-That is why it is labelled a starting point.
+That is why it is labelled a starting point. The ordering is a judgement call, and a student with a goal other than the
+prework would want a different one.
 
-### 11. The exported profile resumes `/setup` at the interview, not past it — *forced (learning-edge's `/setup` resume logic)*
-`learners/<handle>.md` follows learning-edge's `TEMPLATE.md`, with `Setup status: in-progress — next: step 4 (interview…)`
-and the map path filled in. `/setup` then skips what is already answered and runs the knowledge interview. Marking it
-`done` would let claimed grades pick lesson targets: the wrong-altitude failure the tutor exists to prevent.
-**Cost:** a student who self-reported carefully still sits the 15-minute interview.
+### 11. The exported profile resumes `/setup` before the interview, and leaves the goal and the map to `/setup` — *forced (learning-edge's `/setup`)*
+`learners/<handle>.md` follows learning-edge's `TEMPLATE.md`, and its `Setup status` is never `done`, so the knowledge
+interview always runs. Marking it `done` would let claimed grades pick lesson targets: the wrong-altitude failure the
+tutor exists to prevent. Where it resumes depends on the goal, because learning-edge says "the goal is theirs. Do not
+suggest one":
+- **No goal typed** in the studio: `next: step 2 (goal)`, and the tutor asks for it.
+- **A goal typed** (in the student's words, on the Tutor page): `next: step 3`, and the tutor decides, silently,
+  whether the shipped prework map serves *that* goal or builds another.
+
+The profile never records the map as chosen. `/setup` reads a profile naming a map that is missing as an interrupted
+build and silently restarts it, so the map and the profile ship together in **one zip** that unzips into the clone
+(decision 17). The handouts' notation is passed along as a comment, not as a voiced process ask. A self-reported "not
+yet" is written out in words, not as the template's **absent** (which means *probed*).
+**Cost:** a student who self-reported carefully still sits the 15-minute interview, and one who leaves the goal empty
+answers that question again.
 
 ### 12. A walk-through that answers an exercise opens only after the exercise is attempted — *default (the handouts' own rule)*
-Week 2's original handout says "once you have attempted Exercises …, you may check your work by reading …". The
+The original Week 2 handout (`Week2.tex`, superseded by 2a/2b and not shown in the studio) says "once you have
+attempted Exercises …, you may check your work by reading …", and the lock message cites it as that. The
 stream-cipher walk-through answers 2b Exercise 8 **and** shows one answer to Exercise 7 (its PRG game), so it gates on
 both. The gate is enforced on the `#/proof/…` route too, not just on the link. A worked example the handout already
 shows in full (Week 3's prepend-a-0-bit reduction) is never gated.
@@ -129,6 +168,9 @@ the correspondence so it can be checked: `PrivK^eav` is `Game_DistinguishCipher`
 advantage is the same signed `Pr[win] − 1/2`. Its two-world PRG game is presented as one possible answer to Exercise 7,
 next to the hidden-bit form (whose advantage is exactly half, in absolute value: the signed `Pr[win] − 1/2` can be negative). The new walk-through is written in the handout's own
 notation (`A′`, `A`, `λ`).
+The walk-through's analysis step (step 9) also works the hidden-bit case: the same distinguisher is right with
+probability $\tfrac12 + \tfrac{\varepsilon}{2}$, so a student whose own answer to Exercise 8 came out at $\varepsilon/2$
+(which the handout's hint leads to) sees why at the step where they compare, not only in the bridge.
 **Cost:** two notations remain for the student to translate between, and the bridge text must be maintained if
 either side changes.
 
@@ -136,7 +178,8 @@ either side changes.
 `src/proofPrependZero.ts`: nine steps, laid out like the handout's own box-within-a-box figure (challenger left, `A′`
 right with `A` inside, one wire per message), with the EUF-CMA game and the reduction as pseudocode. It shows the
 studio's core move: a handout figure gets a "step through this" link. Its TikZ/LaTeX export works like the original
-proof's.
+proof's. Circle captions (the handout's "prepend 0 bit") are now drawn in the viewer and the TikZ export alike; they
+were silently dropped before, which also hid captions such as "seed length" in the stream-cipher proof.
 **Cost:** a hand-laid diagram, and one more proof to keep faithful.
 
 ### 15. The studio is the root page; ReductionLab is a route — *default*
@@ -150,9 +193,11 @@ what needs it (amber). The detail panel lists every route with each need's one-l
 **Cost:** there is no at-a-glance drawing of the whole graph. With roughly 35 nodes that drawing would be a hairball, so
 legibility won.
 
-### 17. The tutor hand-off is files and commands, not an embedded chat — *forced (learning-edge runs in Claude Code on the learner's machine)*
-The Tutor page gives the clone command, the map file, the profile file and `/setup`. Every map node offers a
-`/lesson <node>` command to copy.
+### 17. The tutor hand-off is one zip and a few commands, not an embedded chat — *forced (learning-edge runs in Claude Code on the learner's machine)*
+The Tutor page gives the clone command, a form (handle, goal in the student's own words, background), one zip holding
+`territories/crypto-camp-prework.md` and `learners/<handle>.md`, the `unzip` command, and `/setup`. One download, not
+two, so the profile can never arrive without its map (decision 11). The zip is written by a short stored-only
+writer (`src/studio/zip.ts`), not a dependency. Every map node offers a `/lesson <node>` command to copy.
 **Cost:** it is one-way. What the tutor learns about the student does not flow back into the studio yet (see below).
 
 ---
@@ -161,7 +206,7 @@ The Tutor page gives the clone command, the map file, the profile file and `/set
 
 | command | what it checks |
 |---|---|
-| `npm run check:tex` | every TeX fragment (both proofs, all handouts, link notes, the map) renders in KaTeX with errors on; the map parses, its references resolve, it cites only real prework items and covers all of them; every proof link points at real proofs and items |
+| `npm run check:tex` | every TeX fragment (both proofs, all handouts, link notes, the map) renders in KaTeX with errors on; the map parses, its references resolve, it cites only real prework items and figures and covers all items; every node is anchored in the handouts and reachable in their order (decision 7); every pre-rendered figure has a text description; every proof link points at real proofs and items |
 | `npm run typecheck` / `npm run lint` / `npm run build` | as usual |
 | `npm run export:tex -- <dir> --pdf` | both proofs' TikZ diagrams and cryptocode figures compile |
 

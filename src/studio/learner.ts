@@ -33,13 +33,15 @@ export interface Holding {
 export interface LearnerState {
   version: 1;
   handle: string;
+  /** What they want to understand, in their own words (learning-edge: "the goal is theirs"). */
+  goal: string;
   background: string;
   holdings: Record<string, Holding>;
   items: Record<string, { status: ItemStatus; at: string }>;
 }
 
 const KEY = 'prework-studio:v1';
-const EMPTY: LearnerState = { version: 1, handle: '', background: '', holdings: {}, items: {} };
+const EMPTY: LearnerState = { version: 1, handle: '', goal: '', background: '', holdings: {}, items: {} };
 
 function load(): LearnerState {
   try {
@@ -95,8 +97,8 @@ export const learner = {
     else delete items[item];
     set({ ...state, items });
   },
-  setProfile(handle: string, background: string) {
-    set({ ...state, handle, background });
+  setProfile(handle: string, goal: string, background: string) {
+    set({ ...state, handle, goal, background });
   },
   reset() {
     set(EMPTY);
@@ -108,22 +110,47 @@ export const isHeld = (h?: Holding) => !!h && HELD.has(h.grade);
 /** An item counts as attempted once the student marked it attempted or done. */
 export const attempted = (s: LearnerState, item: string) => !!s.items[item];
 
+export interface Candidate {
+  node: TerritoryNode;
+  /** The route that makes it reachable: all its formal needs are claimed. */
+  route: Route;
+  /** That route's informal needs not yet claimed (motivation still missing). */
+  missingInformal: string[];
+}
+
 /**
- * Candidate next nodes, derived from the self-report only (never from the map's
+ * Candidate next nodes, derived from the self-report (never from the map's
  * order): not yet held, and reachable by some route whose FORMAL needs are all
  * held. Informal needs don't block — they are what makes a node learnable, not
  * what it logically requires.
+ *
+ * WHICH candidates appear comes from the claims alone. Their ORDER is the week
+ * the handouts first reach them (`weekOf`), then fewest unclaimed informal
+ * needs. That order is curriculum order, which learning-edge's selector
+ * deliberately never uses to pick a lesson; the studio may use it to sort a
+ * list, because the studio exists for working through the prework, and a
+ * Week 7 topic at the top of a Week 2 student's list reads as advice. It never
+ * hides a candidate.
  *
  * This is deliberately weaker than learning-edge's selector (tutor/edge.py): it
  * ignores the apply/generalize distinction and probe-trust, because a
  * self-report carries no probe. The tutor probes before it teaches.
  */
-export function edgeCandidates(t: Territory, s: LearnerState): { node: TerritoryNode; route: Route }[] {
-  const out: { node: TerritoryNode; route: Route }[] = [];
+export function edgeCandidates(t: Territory, s: LearnerState, weekOf: (n: TerritoryNode) => number = () => 0): Candidate[] {
+  const out: Candidate[] = [];
   for (const node of t.nodes) {
     if (isHeld(s.holdings[node.id])) continue;
-    const route = node.routes.find((r) => r.entry || r.needs.every((n) => n.kind !== 'formal' || isHeld(s.holdings[n.node])));
-    if (route) out.push({ node, route });
+    let best: Candidate | null = null;
+    for (const route of node.routes) {
+      if (!route.entry && route.needs.some((n) => n.kind === 'formal' && !isHeld(s.holdings[n.node]))) continue;
+      const missingInformal = route.needs.filter((n) => n.kind === 'informal' && !isHeld(s.holdings[n.node])).map((n) => n.node);
+      if (!best || missingInformal.length < best.missingInformal.length) best = { node, route, missingInformal };
+    }
+    if (best) out.push(best);
   }
-  return out;
+  const order = new Map(t.nodes.map((n, i) => [n.id, i]));
+  return out.sort(
+    (a, b) =>
+      weekOf(a.node) - weekOf(b.node) || a.missingInformal.length - b.missingInformal.length || order.get(a.node.id)! - order.get(b.node.id)!,
+  );
 }

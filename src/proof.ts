@@ -49,7 +49,7 @@ export const streamCipherProof: Proof = {
         { id: 'val-k', kind: 'value', role: 'input', x: 70, y: 250, label: '$k$', caption: 'key $\\xleftarrow{\\$} \\{0,1\\}^n$' },
         { id: 'prg-g', kind: 'box', role: 'internal', x: 180, y: 230, w: 150, h: 90, label: 'G' },
         { id: 'xor-node', kind: 'call', role: 'internal', x: 430, y: 250, label: '$\\oplus$' },
-        { id: 'val-m', kind: 'value', role: 'input', x: 430, y: 120, label: '$m$', caption: 'plaintext' },
+        { id: 'val-m', kind: 'value', role: 'input', x: 430, y: 120, label: '$m$', caption: 'plaintext', captionAbove: true },
         { id: 'val-c', kind: 'value', role: 'output', x: 620, y: 250, label: '$c$', caption: 'ciphertext' },
       ],
       arrows: [
@@ -213,11 +213,12 @@ export const streamCipherProof: Proof = {
       id: 'analysis',
       title: '9 · The Two Worlds',
       tag: 'Compute advantage',
-      claim: '$\\mathsf{Adv}_B = \\mathsf{Adv}_A$: the advantage transfers exactly.',
+      claim: '$\\mathsf{Adv}_B = \\mathsf{Adv}_A$ in the two-world PRG game: the advantage transfers exactly.',
       narration: [
         '<strong>Real world</strong> ($y = G(s)$): A\'s view is exactly the EAV experiment on $\\Pi$ — $c = G(s) \\oplus m_b$ with $s$ random is distributed as $\\mathsf{Enc}_k(m_b)$. So $\\Pr[B=1 \\mid \\text{real}] = \\Pr[A \\text{ wins}] = \\tfrac{1}{2} + \\varepsilon$.',
         '<strong>Random world</strong> ($y = r$): $c = r \\oplus m_b$ is a one-time pad with a truly random pad — $c$ is uniform, independent of $b$. A has zero information, so $\\Pr[B=1 \\mid \\text{random}] = \\tfrac{1}{2}$.',
         'Therefore $$\\begin{aligned}\\mathsf{Adv}_B &= \\Pr[B=1 \\mid \\text{real}] - \\Pr[B=1 \\mid \\text{random}] \\\\ &= (\\tfrac{1}{2} + \\varepsilon) - \\tfrac{1}{2} = \\varepsilon = \\mathsf{Adv}_A.\\end{aligned}$$ B\'s advantage equals A\'s, exactly.',
+        '<strong>With a hidden-bit PRG game instead</strong> (one challenger flips a bit to choose $y = G(s)$ or $y = r$, and B must guess which): the same B is right with probability $\\tfrac{1}{2}(\\tfrac{1}{2} + \\varepsilon) + \\tfrac{1}{2}\\cdot\\tfrac{1}{2} = \\tfrac{1}{2} + \\tfrac{\\varepsilon}{2}$, so its advantage is $\\tfrac{\\varepsilon}{2}$, not $\\varepsilon$. Half of a non-negligible function is still non-negligible, so nothing below changes. If you wrote your PRG game with a hidden bit and got $\\tfrac{\\varepsilon}{2}$, this is why.',
       ],
       entities: [
         { id: 'prg-challenger', kind: 'box', role: 'challenger', x: 36, y: 50, w: 216, h: 110, label: 'PRG Challenger', caption: '$y = G(s)$ or $y = r$' },
@@ -242,7 +243,7 @@ export const streamCipherProof: Proof = {
       tag: 'QED',
       claim: 'A non-negligible $\\mathsf{Adv}_A$ gives a non-negligible $\\mathsf{Adv}_B$ — contradicting PRG security.',
       narration: [
-        'If A broke the stream cipher with non-negligible advantage $\\varepsilon$, then B breaks the PRG with the <em>same</em> non-negligible advantage $\\varepsilon$.',
+        'If A broke the stream cipher with non-negligible advantage $\\varepsilon$, then B breaks the PRG with the <em>same</em> non-negligible advantage $\\varepsilon$ (or $\\tfrac{\\varepsilon}{2}$ in a hidden-bit PRG game, which is still non-negligible).',
         'But $G$ is a secure PRG — no efficient distinguisher has non-negligible advantage. Contradiction.',
         'Therefore no such A exists: the stream cipher $\\Pi$ is EAV-secure. <strong>QED.</strong>',
       ],

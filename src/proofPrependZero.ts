@@ -19,7 +19,7 @@ const CHALLENGER = {
   label: 'EUF-CMA challenger',
   caption: 'for $(G,S,V)$ · knows $sk$',
 } as const;
-const REDUCTION = { id: 'red', kind: 'box', role: 'reduction', x: 300, y: 40, w: 556, h: 440, label: "Reduction A′" } as const;
+const REDUCTION = { id: 'red', kind: 'box', role: 'reduction', x: 300, y: 40, w: 556, h: 440, label: "Reduction A′", caption: 'forger against $(G,S,V)$' } as const;
 const FORGER = {
   id: 'adv',
   kind: 'box',

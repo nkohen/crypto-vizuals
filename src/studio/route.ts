@@ -15,7 +15,12 @@ export type Route =
   | { view: 'proof'; slug: string };
 
 export function parseHash(hash: string): Route {
-  const parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  let parts: string[];
+  try {
+    parts = hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  } catch {
+    return { view: 'home' }; // malformed escape such as `#/map/%`
+  }
   switch (parts[0]) {
     case 'week':
       return parts[1] ? { view: 'week', week: parts[1], anchor: parts[2] } : { view: 'home' };

@@ -287,8 +287,8 @@ function inline(src: string, ctx: Ctx): string {
       case 'ref': {
         const [a, j] = readArg(src, i);
         const n = ctx.labels.get(a);
-        if (!n) ctx.warnings.push(`${ctx.week}: unresolved \\ref{${a}}`);
-        out += n ?? '??';
+        if (!n) throw new TexError(`${ctx.week}: unresolved \\ref{${a}}`);
+        out += n;
         i = j;
         break;
       }

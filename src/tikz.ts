@@ -16,6 +16,7 @@ import {
   centerOf,
   entityBounds,
   isCircle,
+  circleCaptionCenter,
   paintOrder,
   type Point,
 } from './geometry';
@@ -94,6 +95,7 @@ function emitEntity(e: BaseEntity): string[] {
     const font = e.kind === 'call' ? '\\Large' : '\\normalsize';
     body.push(`  \\filldraw[draw=${color}, fill=${color}, fill opacity=${fill}, ${lw}] ${at(c)} circle[radius=${pt(b.w / 2)}];`);
     body.push(`  \\node[font=${font}, text=${color}!75!black] at ${at(c)} {${richTextToLatex(e.label)}};`);
+    if (e.caption) body.push(`  \\node[font=\\footnotesize, text=cvmuted] at ${at(circleCaptionCenter(e))} {${richTextToLatex(e.caption)}};`);
   } else {
     const tl = { x: b.x, y: b.y };
     const br = { x: b.x + b.w, y: b.y + b.h };

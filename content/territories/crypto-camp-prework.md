@@ -1,5 +1,9 @@
 # Territory map — Cryptography Camp prework
 
+<!-- Shape: the Prework Studio parses this file. Keep every node as "### `id` · Title", prose, then
+"- **Prework:**" and "- **Route:**" bullets with indented "formal ← `id` — why" / "informal ← `id` — why" needs,
+under a lettered "## X. Section". Check edits with `npm run check:tex` in crypto-vizuals. -->
+
 *A territory map: what there is to learn on the way to a goal, and how each piece depends on the
 others. It is not a syllabus and not a learner record. The order of nodes here is not a teaching
 order: which node comes next depends on what a particular learner already holds. This map was
@@ -7,7 +11,7 @@ pre-computed from the prework handouts (Weeks 1, 2a, 2b, 3–7) and their readin
 show it next to the exercises. Because students see it, it describes what each concept is and how
 it bears on the others. It never says how to solve an exercise.*
 
-**Status:** gated once (claim-auditor → red-team), 2026-11-04 — pre-computed for the Cryptography Camp prework goal (not built for one learner). Still a hypothesis about the dependency structure; a lesson's own prep re-verifies its target.
+**Status:** gated once (claim-auditor → red-team), 2026-11-04; edges re-checked against the handouts' order 2026-11-05 — pre-computed for the Cryptography Camp prework goal (not built for one learner). Still a hypothesis about the dependency structure; a lesson's own prep re-verifies its target.
 
 **Goal this map serves:** working through the Cryptography Camp prework. That runs from modular
 arithmetic and Diffie–Hellman/ElGamal, through proof by reduction, attack games and finite
@@ -19,7 +23,7 @@ threshold Schnorr (Pedersen DKG, FROST).
 limit), and enough programming to write small functions and loops in some language. No prior
 cryptography, abstract algebra or probability is assumed. Comfort with sets and functions is
 covered by an optional reading (`sets-functions`). Edges are **formal** (you cannot state the next
-thing, or follow this route's proof of it, without this one) or **informal** (motivation, intuition, analogy). Where a result is
+thing as the handouts first state it, or follow this route's proof of it, without this one) or **informal** (motivation, intuition, analogy). Where a result is
 reached by genuinely different paths, each path is listed as its own route.
 
 ---
@@ -86,6 +90,7 @@ In Diffie–Hellman key exchange, two parties with public keys $X = g^x$ and $Y 
 ### `schnorr-signature-scheme` · The Schnorr signature scheme
 A Schnorr signature on $m$ under private key $x$ (with public key $X = g^x$) is a pair $(R, s)$, where $R = g^k$ for a fresh random nonce $k$ and $s = k + H(R, m)\cdot x$. It is verified by checking $g^s = R \cdot X^{H(R, m)}$. The core of the course is built around this scheme's security, and MuSig, MuSig2 and FROST are all built on it.
 
+- **Prework:** `2a/exercise-3`
 - **Route:** Signatures in a prime-order group
   - formal ← `groups-discrete-log` — keys, nonces and verification all live in $\G$
 
@@ -120,14 +125,15 @@ A finite outcome space $\Omega$, events as subsets of it, and three rules that d
 ### `attack-games` · Attack games and advantage
 An attack game is a program, the challenger, that samples secrets, interacts with an adversary program $\adv$, and outputs whether $\adv$ won. The handouts write these as, for example, $\mathsf{DL}^{\adv}(\lambda)$, where $\lambda$ is the security parameter. The advantage is $\pr{\text{win}}$ for search games and $\pr{\text{win}} - \tfrac{1}{2}$ for distinguishing games, where a random guess already wins half the time. Week 2a first reads $\pr{\cdot}$ informally, and Week 2b then defines it.
 
+- **Prework:** `2a/figure-1`
 - **Route:** Games as programs
-  - formal ← `finite-probability` — advantage is a probability over the game's random choices
+  - informal ← `finite-probability` — advantage is a probability over the game's random choices; Week 2a reads $\pr{\cdot}$ informally, and Week 2b defines it
   - informal ← `proof-by-reduction` — a game turns "the magic box solves $Y$" into a precise target
 
 ### `asymptotic-security` · Negligible functions and PPT adversaries
 A function is negligible if it eventually stays below $1/p(\lambda)$ for every polynomial $p$, and the course uses several equivalent ways of saying this. A scheme or assumption is secure if every probabilistic polynomial-time (PPT) adversary has negligible advantage. The PPT restriction is what stops an adversary from turning a negligible chance into a non-negligible one by brute force.
 
-- **Prework:** `3/reading-1`, `3/exercise-1`, `3/exercise-2`
+- **Prework:** `3/reading-1`, `3/exercise-1`, `3/exercise-2`, `3/exercise-3`
 - **Route:** Security as "negligible for every PPT adversary"
   - formal ← `attack-games` — security is a statement about every PPT adversary's advantage in a game
 
@@ -139,7 +145,7 @@ The DL, CDH and DDH assumptions each say that every efficient adversary has negl
   - formal ← `attack-games` — each assumption is a statement about a game's advantage
   - formal ← `diffie-hellman-elgamal` — CDH and DDH are about the Diffie–Hellman shared secret
   - formal ← `proof-by-reduction` — the relations between assumptions are proved in contrapositive form
-  - formal ← `asymptotic-security` — each assumption says every efficient adversary's advantage is negligible (read informally in Week 2a, made exact in Week 3)
+  - informal ← `asymptotic-security` — each assumption says every efficient adversary's advantage is negligible; Week 2a reads "negligible" informally, and Week 3 makes it exact and asks you to re-check these reductions with it (`3/exercise-3`)
 
 ### `one-time-pad` · The distinguishing game and the one-time pad
 In the cipher-distinguishing game, the adversary chooses two messages and must tell which one a challenge ciphertext encrypts. The one-time pad $E(k, m) = k \oplus m$ achieves advantage exactly $0$, which is called perfect secrecy. Shannon showed that perfect secrecy requires keys at least as long as messages, and that is what motivates pseudo-random generators.
@@ -159,7 +165,7 @@ A pseudo-random generator (PRG) deterministically stretches a short seed into a 
   - formal ← `one-time-pad` — the stream cipher is the pad with a stretched key, and its security uses the same distinguishing game
   - formal ← `proof-by-reduction` — the theorem is proved in contrapositive form
   - formal ← `finite-probability` — the reduction's advantage has to be computed, not just asserted
-  - formal ← `asymptotic-security` — "not negligible in, not negligible out" (read informally in Week 2b, made exact in Week 3)
+  - informal ← `asymptotic-security` — "not negligible in, not negligible out"; Week 2b reads "negligible" informally, and Week 3 makes it exact and asks you to re-check this reduction with it (`3/exercise-3`)
 
 ## F. Signatures and idealized models
 
@@ -175,6 +181,7 @@ A signature scheme is a triple of algorithms $(G, S, V)$. EUF-CMA security says 
 ### `reduction-diagrams` · Box-within-a-box pictures
 A reduction drawn as nested boxes: the outer challenger, the reduction $\adv'$, and the adversary $\adv$ running inside it, with a wire for every message that crosses a boundary. The Week 3 handout draws its worked reduction this way, and this tool's diagrams use the same picture. It makes visible which party knows which secret and who answers whose queries. *(informal concept)*
 
+- **Prework:** `3/figure-3`
 - **Route:** Drawing a reduction
   - informal ← `proof-by-reduction` — the magic box, drawn literally
   - informal ← `attack-games` — the outer box is the challenger
@@ -324,6 +331,7 @@ A Pedersen commitment $C = g^x h^y$ hides $x$ perfectly, and it is computational
 ### `omdl` · One-more discrete log (OMDL)
 In the OMDL game, the adversary gets $k$ challenges $g^{x_1}, \dots, g^{x_k}$ and may call a discrete-log oracle $k-1$ times, and it must output all $k$ logs. Week 2a's worked example shows OMDL-hard $\Rightarrow$ DL-hard, so OMDL is the stronger assumption. Komlo's note, quoted in Week 5, describes OMDL as useful when the reduction has to pick a commitment $R$ before it knows the challenge, as in threshold or blind signatures. In this course, though, MuSig and FROST are proved under DL, and MuSig2 is proved under AOMDL.
 
+- **Prework:** `5/reading-4`
 - **Route:** DL with a helper oracle
   - formal ← `dh-assumptions` — OMDL extends the DL game with a discrete-log oracle
   - formal ← `proof-by-reduction` — OMDL-hard ⇒ DL-hard is proved in contrapositive form (Week 2a worked example)
@@ -464,7 +472,7 @@ FROST (Komlo–Goldberg) lets any $t$ of $n$ key holders produce an ordinary Sch
 - **Notation drifts across readings.** The course uses $\lambda$ for the security parameter, Katz–Lindell use $n$, and Bellare–Palacio use $k$. The course's distinguishing advantage is the signed $\pr{\text{win}} - \tfrac{1}{2}$. Boneh–Shoup's two-experiment advantage $\lvert \pr{W_0} - \pr{W_1} \rvert$ is twice its absolute value. Search-game and EUF-CMA advantages have no $-\tfrac{1}{2}$.
 - **Three routes to Schnorr EUF-CMA. Do not collapse them.** The AGM route still uses the ROM. The forking-lemma route is explicitly asked to avoid invoking Fiat–Shamir, so `fiat-shamir` is informal on that route only.
 - **"Algebraic" in AOMDL is not the AGM.** The handout quotes MuSig2 on this: it is a restriction on the reduction, orthogonal to the AGM. The edge is informal on purpose.
-- **Rigor comes in two passes.** Weeks 2a/2b use "negligible" informally, and Week 3 (`3/exercise-3`) revisits those reductions rigorously. `dh-assumptions` and `prg-stream-cipher` each have one route with a formal edge to `asymptotic-security`. A learner on a Week 2a/2b exercise holds that node only at its informal reading ("unbelievably small"), not at the exact definition.
+- **Rigor comes in two passes.** Weeks 2a/2b use "negligible" and $\pr{\cdot}$ informally; Week 2b defines probability and Week 3 defines negligible, and `3/exercise-3` asks for the Week 2 reductions to be re-checked with the exact definition. So `dh-assumptions` and `prg-stream-cipher` need `asymptotic-security` only informally, and `attack-games` needs `finite-probability` only informally: that is how the handouts first state them. A learner who has done `3/exercise-3` holds the rigorous version; one on a Week 2a/2b exercise holds the informal reading ("unbelievably small").
 - **Granted facts.** Several exercises explicitly grant facts proved later (independence products and squares of non-negligible functions in `2a/exercise-4`; halves of non-negligible functions in `2b/exercise-8`). Treat these as named imports, not as things the learner has earned.
 - **Informal concepts to model, not drop:** the magic box; the box-within-a-box picture (`reduction-diagrams`); why adversaries are PPT; why ROM query reporting and programming matter; why an honest verifier is a fair assumption for Sigma protocols; Shannon's bound as the motivation for PRGs; birthday paradox to collisions.
 - **Some exercises build on earlier ones** even where the concept edge is informal: `5/exercise-2` starts from `5/exercise-1`; `6/exercise-1` uses the OR construction from `5/reading-3`; `5/exercise-6` reworks the reduction of `5/reading-4`.
@@ -497,6 +505,19 @@ the ROM. Fixed in this file:
   the OMDL proof.
 - Prework citations: `3/exercise-4` added to `euf-cma` (parts (a) and (b) are attacks, not oracle simulation), and
   `1/exercise-5` added to `groups-discrete-log`.
+
+**Review, 2026-11-05 (fresh code-reviewer pass, checked against the handout sources): fixed in this file.**
+
+- The collapse above went too far: one route with a formal edge to `asymptotic-security` made a Week 3 concept a
+  formal need of `dh-assumptions` (Week 2a) and `prg-stream-cipher` (Week 2b), against this map's own legend, since
+  the handouts state both with "negligible" read informally. Those edges are now informal, as is
+  `attack-games` ← `finite-probability` (Week 2a reads $\pr{\cdot}$ informally; Week 2b defines it). The rigorous
+  re-check, `3/exercise-3`, is now also cited under `asymptotic-security`.
+- `attack-games`, `schnorr-signature-scheme`, `reduction-diagrams` and `omdl` cited no handout item, so a student
+  working from the handouts never met them. They now cite `2a/figure-1`, `2a/exercise-3`, `3/figure-3` and
+  `5/reading-4`.
+- Two mechanical checks now guard these (the studio's `npm run check:tex`): every node cites a handout item, and
+  every node has a route whose formal needs are all first cited no later than the node itself.
 
 ## Adversarial ledger
 

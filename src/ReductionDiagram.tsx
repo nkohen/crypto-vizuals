@@ -11,6 +11,7 @@ import {
   boxCaptionCenter,
   entityBounds,
   isCircle,
+  circleCaptionCenter,
   paintOrder,
 } from './geometry';
 
@@ -240,6 +241,18 @@ export default function ReductionDiagram({ entities, arrows, note }: Props) {
                     >
                       {renderRichText(e.label)}
                     </SvgLabel>
+                    {e.caption && (
+                      <SvgLabel
+                        cx={circleCaptionCenter(e).x}
+                        cy={circleCaptionCenter(e).y}
+                        width={b.w + 80}
+                        height={20}
+                        fontSize={11}
+                        color="#8492ad"
+                      >
+                        {renderRichText(e.caption)}
+                      </SvgLabel>
+                    )}
                   </>
                 ) : (
                   <>

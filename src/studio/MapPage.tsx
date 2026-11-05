@@ -1,16 +1,17 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Compass, Sparkles, Copy, Check, ShieldCheck, X } from 'lucide-react';
-import { TERRITORY, nodeById, dependentsOf } from '../territory';
+import { TERRITORY, nodeById, dependentsOf, weekOf } from '../territory';
 import type { TerritoryNode } from '../territory/parse';
-import { mdToBlocks } from '../territory/markdown';
+import { mdInline, mdToBlocks } from '../territory/markdown';
 import { PREWORK_MACROS } from '../prework/content';
 import { renderRichText } from '../richText';
 import Blocks from './Blocks';
 import { itemName } from './names';
-import { GRADES, edgeCandidates, isHeld, learner, useLearner, type Grade } from './learner';
+import { GRADES, edgeCandidates, isHeld, learner, useLearner, type Candidate, type Grade } from './learner';
 import { href } from './route';
 
-const rich = (t: string) => renderRichText(t, PREWORK_MACROS);
+// Map text is markdown-flavoured (`code`, **bold**, *italic*) around TeX.
+const rich = (t: string) => renderRichText(mdInline(t), PREWORK_MACROS);
 
 const GRADE_STYLE: Record<Grade, string> = {
   'self-derived': 'bg-jade-500/25 text-jade-200 border-jade-500/50',
@@ -23,7 +24,8 @@ const GRADE_STYLE: Record<Grade, string> = {
 export default function MapPage({ selected }: { selected?: string }) {
   const st = useLearner();
   const node = selected ? nodeById.get(selected) : undefined;
-  const candidates = new Set(edgeCandidates(TERRITORY, st).map((c) => c.node.id));
+  const ranked = edgeCandidates(TERRITORY, st, weekOf);
+  const candidates = new Set(ranked.map((c) => c.node.id));
 
   return (
     <div className="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -44,7 +46,7 @@ export default function MapPage({ selected }: { selected?: string }) {
         <MapExtras />
       </div>
       <aside className={`${node ? 'order-first lg:order-none' : ''} lg:sticky lg:top-20 lg:max-h-[calc(100vh-6rem)] lg:self-start lg:overflow-y-auto scroll-thin`}>
-        {node ? <NodePanel node={node} candidate={candidates.has(node.id)} /> : <CandidatesPanel ids={[...candidates]} />}
+        {node ? <NodePanel node={node} candidate={candidates.has(node.id)} /> : <CandidatesPanel candidates={ranked} />}
       </aside>
     </div>
   );
@@ -72,7 +74,7 @@ function Legend() {
         needed by
       </span>
       <span className="flex items-center gap-1.5">
-        <span className="inline-block h-3 w-5 rounded border border-dashed border-jade-400" /> candidate, from your self-report
+        <span className="inline-block h-3 w-5 rounded border border-dashed border-jade-400" /> reachable from your claims
       </span>
     </div>
   );
@@ -326,7 +328,7 @@ function NodePanel({ node, candidate }: { node: TerritoryNode; candidate: boolea
         )}
         {candidate && (
           <p className="mt-2 flex items-start gap-1.5 text-[11px] text-jade-300">
-            <Sparkles size={12} className="mt-0.5 shrink-0" /> From your self-report, everything this needs formally is in hand.
+            <Sparkles size={12} className="mt-0.5 shrink-0" /> From your claims, everything this needs formally (on some route) is in hand.
           </p>
         )}
         <TutorCommand node={node} />
@@ -362,35 +364,47 @@ function TutorCommand({ node }: { node: TerritoryNode }) {
   );
 }
 
-function CandidatesPanel({ ids }: { ids: string[] }) {
+function CandidatesPanel({ candidates }: { candidates: Candidate[] }) {
   return (
     <div className="rounded-2xl border border-ink-700/60 bg-ink-900/60 p-4">
       <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-50">
-        <Compass size={16} className="text-jade-400" /> Candidates from your self-report
+        <Compass size={16} className="text-jade-400" /> Reachable from your claims
       </h2>
       <p className="mt-1 text-xs leading-relaxed text-ink-400">
-        Nodes you haven't marked as held whose formal needs (on some route) you have. They come from your own report only. The tutor
-        finds your actual edge by asking and probing, so treat these as a starting point, not a verdict.
+        Nodes you haven't claimed whose formal needs (on some route) you have. Listed by where the handouts first reach them,
+        then by how much of their intuition you've also claimed. They come from your own report only; the tutor finds your actual edge by asking and
+        probing, so treat these as a starting point, not a verdict.
       </p>
-      <ul className="mt-3 space-y-1">
-        {ids.map((id) => {
-          const n = nodeById.get(id)!;
-          return (
-            <li key={id}>
-              <a href={href.map(id)} className="block rounded-md border border-dashed border-jade-500/40 px-2 py-1 text-xs text-ink-100 hover:bg-jade-500/10">
-                {rich(n.title)}
+      {candidates.length === 0 ? (
+        <p className="mt-3 text-xs text-ink-400">Nothing yet: select a node you already know and record how you hold it.</p>
+      ) : (
+        <ul className="mt-3 space-y-1">
+          {candidates.map(({ node, missingInformal }) => (
+            <li key={node.id}>
+              <a href={href.map(node.id)} className="block rounded-md border border-dashed border-jade-500/40 px-2 py-1 text-xs text-ink-100 hover:bg-jade-500/10">
+                {rich(node.title)}
+                {missingInformal.length > 0 && (
+                  <span className="block text-[11px] text-ink-400">
+                    intuition from: {missingInformal.map((id) => nodeById.get(id)?.title ?? id).join(', ')}
+                  </span>
+                )}
               </a>
             </li>
-          );
-        })}
-      </ul>
+          ))}
+        </ul>
+      )}
       <p className="mt-3 text-[11px] text-ink-500">Select any node to record how you hold it.</p>
     </div>
   );
 }
 
+// What a student sees of the map file's prose sections. The rest (notes for the
+// tutor, the audit, the adversarial ledger) is addressed to the tutor and to
+// maintainers: it stays in the file the student downloads, not on this page.
+const STUDENT_EXTRAS = /^(Out of scope|Sources)$/i;
+
 function MapExtras() {
-  const shown = TERRITORY.extras.filter((e) => !/^Prework not mapped/i.test(e.heading));
+  const shown = TERRITORY.extras.filter((e) => STUDENT_EXTRAS.test(e.heading));
   return (
     <div className="mt-5 space-y-2">
       {TERRITORY.entryAssumptions && (

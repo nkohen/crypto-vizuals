@@ -43,6 +43,15 @@ export function renderRichText(text: string, macros?: Record<string, string>): R
       );
     }
     if (part.startsWith('<code>') && part.endsWith('</code>')) {
+      const inner = part.slice(6, -7);
+      // A bare URL (the ingest's rendering of \url{…}) is a link.
+      if (/^https?:\/\/\S+$/.test(inner)) {
+        return (
+          <a key={i} href={inner} target="_blank" rel="noreferrer" className="break-all font-mono text-[0.82em] text-accent-300 underline underline-offset-2 hover:text-accent-200">
+            {inner}
+          </a>
+        );
+      }
       return (
         <code
           key={i}

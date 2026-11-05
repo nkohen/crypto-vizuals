@@ -99,6 +99,8 @@ export function parseTerritory(md: string): Territory {
   const intro: string[] = [];
   let headerField: 'status' | 'goal' | 'entryAssumptions' | null = null;
 
+  let inComment = false;
+
   const field = (line: string, label: string) => {
     const m = new RegExp(`^\\*\\*${label}:\\*\\*\\s*(.*)$`).exec(line);
     return m?.[1];
@@ -109,6 +111,11 @@ export function parseTerritory(md: string): Territory {
     if (i === 0) {
       if (!line.startsWith('# ')) fail(i, 'a territory map starts with "# <title>"');
       t.title = line.slice(2).replace(/^Territory map — /, '');
+      return;
+    }
+    // HTML comments (maintainer notes) are invisible to the studio, as in markdown.
+    if (!extra && (inComment || line.trimStart().startsWith('<!--'))) {
+      inComment = !line.includes('-->');
       return;
     }
     let m: RegExpExecArray | null;
@@ -125,6 +132,7 @@ export function parseTerritory(md: string): Territory {
       return;
     }
     if (extra) {
+      if (NODE_RE.test(line)) fail(i, `node under "## ${extra.heading}", which is not a lettered "## X. Title" section`);
       extra.markdown += raw + '\n';
       return;
     }
@@ -190,8 +198,18 @@ export function parseTerritory(md: string): Territory {
   return t;
 }
 
+/** What the map is checked against: the ingested handouts. */
+export interface PreworkIndex {
+  /** Items every map must account for (cite, or list under "Prework not mapped"). */
+  covered: Set<string>;
+  /** Everything a node may cite: the covered items plus figures. */
+  citable: Set<string>;
+  /** Position of each week in the handouts' order ("1" → 0, "2a" → 1, …). */
+  weekRank: Map<string, number>;
+}
+
 /** Reference checks: returns a list of problems (empty when the map is sound). */
-export function validateTerritory(t: Territory, knownItems?: Set<string>): string[] {
+export function validateTerritory(t: Territory, prework?: PreworkIndex): string[] {
   const problems: string[] = [];
   const ids = new Map<string, TerritoryNode>();
   for (const n of t.nodes) {
@@ -204,7 +222,7 @@ export function validateTerritory(t: Territory, knownItems?: Set<string>): strin
         if (!ids.has(need.node)) problems.push(`line ${n.line}: ${n.id} needs unknown node ${need.node}`);
         if (need.node === n.id) problems.push(`line ${n.line}: ${n.id} needs itself`);
       }
-    if (knownItems) for (const p of n.prework) if (!knownItems.has(p)) problems.push(`line ${n.line}: ${n.id} cites unknown prework item ${p}`);
+    if (prework) for (const p of n.prework) if (!prework.citable.has(p)) problems.push(`line ${n.line}: ${n.id} cites unknown prework item ${p}`);
   }
   // A formal cycle can only be a cycle through every route of each node on it
   // to be fatal, but even one cyclic route is a modelling error worth flagging.
@@ -220,9 +238,47 @@ export function validateTerritory(t: Territory, knownItems?: Set<string>): strin
     state.set(id, 'done');
   };
   for (const n of t.nodes) visit(n.id, []);
-  if (knownItems) {
+  if (prework) {
     const cited = new Set([...t.nodes.flatMap((n) => n.prework), ...t.notMapped]);
-    for (const item of knownItems) if (!cited.has(item)) problems.push(`prework item ${item} is neither cited by a node nor under "Prework not mapped"`);
+    for (const item of prework.covered) if (!cited.has(item)) problems.push(`prework item ${item} is neither cited by a node nor under "Prework not mapped"`);
+    problems.push(...orderProblems(t, ids, prework));
   }
   return problems;
+}
+
+/** The handout week a node is first met in: its earliest citation. */
+export function firstWeek(n: TerritoryNode, weekRank: Map<string, number>): number | undefined {
+  const ranks = n.prework.map((p) => weekRank.get(p.split('/')[0])).filter((r): r is number => r !== undefined);
+  return ranks.length ? Math.min(...ranks) : undefined;
+}
+
+// Two checks that keep the map usable as navigation alongside the handouts.
+//  - Anchored: every node cites a handout item, or a student working from the
+//    handouts never meets it (and nothing that formally needs it can become a
+//    candidate until they find it on the map by themselves).
+//  - Reachable in the handouts' order: some route's formal needs are all first
+//    met no later than the node itself. A "formal" need first met in a later
+//    week contradicts the legend ("cannot state it as the handouts first state
+//    it"): the handouts did state it without that need.
+function orderProblems(t: Territory, ids: Map<string, TerritoryNode>, prework: PreworkIndex): string[] {
+  const out: string[] = [];
+  for (const n of t.nodes) {
+    const week = firstWeek(n, prework.weekRank);
+    if (week === undefined) {
+      out.push(`line ${n.line}: ${n.id} cites no handout item (add a "- **Prework:**" line)`);
+      continue;
+    }
+    const late = n.routes.map((r) =>
+      r.needs.filter((need) => {
+        const w = need.kind === 'formal' ? firstWeek(ids.get(need.node)!, prework.weekRank) : undefined;
+        return w !== undefined && w > week;
+      }),
+    );
+    if (late.every((l) => l.length > 0))
+      out.push(
+        `line ${n.line}: ${n.id} is first met in the handouts before some formal need on every route: ` +
+          late.map((l) => l.map((x) => x.node).join(', ')).join(' | '),
+      );
+  }
+  return out;
 }

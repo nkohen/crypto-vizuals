@@ -1,11 +1,20 @@
 // Export the studio's state as a learning-edge learner profile
 // (`learners/<handle>.md`, the shape of learning-edge's learners/TEMPLATE.md).
 //
-// The profile is written so the tutor's `/setup` RESUMES AT THE INTERVIEW
-// (step 4): every grade here is the student's own claim, and learning-edge's
-// rule is "never trust a named background". Marking setup `done` would let
-// claimed grades pick lesson targets, the wrong-altitude failure the tutor
-// exists to prevent.
+// The profile is written so the tutor's `/setup` resumes BEFORE the knowledge
+// interview, never past it: every grade here is the student's own claim, and
+// learning-edge's rule is "never trust a named background". Marking setup
+// `done` would let claimed grades pick lesson targets, the wrong-altitude
+// failure the tutor exists to prevent.
+//
+// Where it resumes depends on the goal, which learning-edge insists is the
+// learner's own ("Do not suggest one"):
+//  - no goal typed in the studio → step 2: the tutor asks for it;
+//  - a goal typed → step 3: the tutor decides, silently, whether the shipped
+//    prework map serves THAT goal or builds one. The studio never records the
+//    map as chosen; /setup reads a named-but-missing map as an interrupted build.
+// The map and the profile ship in one zip (see TutorPage), so the map is in
+// `territories/` whenever the profile is in `learners/`.
 
 import type { Territory } from '../territory/parse';
 import type { PreworkContent } from '../prework/types';
@@ -22,13 +31,22 @@ export function profileMarkdown(s: LearnerState, t: Territory, content: PreworkC
   const title = (id: string) => t.nodes.find((n) => n.id === id)?.title ?? id;
   const gradeLabel = (g: string) => GRADES.find((x) => x.grade === g)?.grade ?? g;
 
+  // An "absent" self-report is not the template's Absent (which means probed),
+  // so it is written out in words rather than as that grade.
   const claimed = Object.entries(s.holdings)
     .sort(([a], [b]) => t.nodes.findIndex((n) => n.id === a) - t.nodes.findIndex((n) => n.id === b))
     .map(
       ([id, h]) =>
-        `- ${title(id)} (\`${id}\`): **${gradeLabel(h.grade)} (claimed)**. Self-reported in the Prework Studio, ${h.at}; not yet probed.` +
+        `- ${title(id)} (\`${id}\`): ` +
+        (h.grade === 'absent'
+          ? `**says they don't hold this yet** (self-reported in the Prework Studio, ${h.at}; not probed).`
+          : `**${gradeLabel(h.grade)} (claimed)**. Self-reported in the Prework Studio, ${h.at}; not yet probed.`) +
         (h.note ? ` Their note: “${h.note.replace(/\s+/g, ' ').trim()}”` : ''),
     );
+  const goal = s.goal.replace(/\s+/g, ' ').trim();
+  const status = goal
+    ? `in-progress — next: step 3 (map: decide whether \`${TUTOR_MAP_PATH}\`, shipped gated by the Prework Studio for the prework, serves this goal; if not, build one) · install check: not yet run`
+    : 'in-progress — next: step 2 (goal — not given in the studio; handle and background below) · install check: not yet run';
 
   const byWeek = new Map<string, string[]>();
   for (const [item, st] of Object.entries(s.items)) {
@@ -44,8 +62,8 @@ export function profileMarkdown(s: LearnerState, t: Territory, content: PreworkC
 
   return `# Learner model — ${handle}
 
-*Started from the Cryptography Camp Prework Studio on ${day}. Everything below the Goal was entered
-by the learner in the studio, so every grade is a **claim**, not an observation. Written by the
+*Started from the Cryptography Camp Prework Studio on ${day}. The goal, background and grades below
+were entered by the learner in the studio, so every grade is a **claim**, not an observation. Written by the
 tutor and updated after every lesson from here on. Hedged prose, not a score sheet. Every claim
 says HOW the learner came to hold it.*
 
@@ -55,11 +73,12 @@ says HOW the learner came to hold it.*
 why) · **absent** (probed, not held; this is data too). Mark anything only *claimed* in the
 interview and not yet observed as **(claimed)**.
 
-**Setup status:** in-progress — next: step 4 (interview; covered: none — the studio self-report below is unprobed) · install check: not yet run
+**Setup status:** ${status}
 
 ## Goal
-- What they want to understand, in their words: work through the Cryptography Camp prework (github.com/${content.repo}), able to read and write the security reductions it builds to.
-- Territory map: \`${TUTOR_MAP_PATH}\` (pre-computed; shipped with the Prework Studio)
+- What they want to understand, in their words: ${goal || '(not given in the studio — ask)'}
+- Territory map: (not chosen yet — step 3)
+- Context: they came from the Cryptography Camp Prework Studio (github.com/${content.repo}); their progress through its handouts is below.
 
 ## Who they are (durable, cross-topic)
 - Background (field, training, what they do day to day): ${s.background.trim() || '(not given in the studio — ask)'}
@@ -80,7 +99,9 @@ ${claimed.length ? claimed.join('\n') : '<!-- nothing self-reported in the studi
 ## Process asks
 <!-- Their communication conventions and explicit requests about HOW to be taught:
      notation, pacing, how they like prior results reloaded. These override the generic method. -->
-- (Studio default, not voiced by the learner — confirm in the interview.) They work from the Cryptography Camp prework handouts, so use the handouts' notation: λ for the security parameter, attack games written like $\\mathrm{DL}^{\\mathcal A}(\\lambda)$, distinguishing advantage = Pr[win] − 1/2.
+<!-- Not voiced by the learner (a Prework Studio default; confirm before treating it as an ask):
+     the handouts write λ for the security parameter, attack games like $\\mathrm{DL}^{\\mathcal A}(\\lambda)$,
+     and the distinguishing advantage as Pr[win] − 1/2. -->
 
 ## Prework progress (self-reported in the studio, ${day})
 ${progress.length ? progress.join('\n') : '- nothing marked yet'}

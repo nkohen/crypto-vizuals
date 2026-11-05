@@ -4,11 +4,22 @@
 // Block format, so math in the map renders through the same KaTeX path.
 import type { Block } from '../prework/types';
 
+// Math is split out first and passed through untouched, so `$m^*$ … $\sigma^*$`
+// is not read as an italic span.
+const MATH_RE = /(\$\$[\s\S]+?\$\$|\$[^$\n]+\$)/;
+
 export function mdInline(s: string): string {
   return s
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    .split(MATH_RE)
+    .map((part, i) =>
+      i % 2
+        ? part
+        : part
+            .replace(/`([^`]+)`/g, '<code>$1</code>')
+            .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+            .replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>'),
+    )
+    .join('');
 }
 
 export function mdToBlocks(md: string): Block[] {

@@ -9,6 +9,7 @@ import { learner, useLearner, attempted, type ItemStatus } from './learner';
 import { anchorId, href } from './route';
 import { PROOFS } from '../proofs';
 import { ENV_NAME, itemName, itemFullName, summaries } from './names';
+import { FIGURE_DESCRIPTIONS } from './figureText';
 
 const rich = (t: string) => renderRichText(t, PREWORK_MACROS);
 
@@ -186,7 +187,7 @@ export function ProofLinkCard({ link }: { link: ProofLink }) {
               </a>
             </span>
           ))}{' '}
-          attempted — the handout's own rule: attempt first, then check your work.
+          attempted. Attempt first, then check your work: the rule the original Week 2 handout gave for its own check-your-work reading.
         </div>
       </div>
     );
@@ -213,7 +214,7 @@ function FigureView({ block }: { block: FigureBlock }) {
       {block.pseudocode && <PseudocodeFigure figure={block.pseudocode} macros={PREWORK_MACROS} showCaption={false} />}
       {block.svg && (
         <div className="overflow-x-auto rounded-xl border border-ink-600/70 bg-white p-3">
-          <img src={`${import.meta.env.BASE_URL}${block.svg}`} alt={`Figure ${block.number}. ${stripMarkup(block.caption)}`} className="mx-auto max-w-full" />
+          <img src={`${import.meta.env.BASE_URL}${block.svg}`} alt={FIGURE_DESCRIPTIONS[block.id] ?? `Figure ${block.number}; described by its caption below.`} className="mx-auto max-w-full" />
         </div>
       )}
       <figcaption className="mt-2 text-xs leading-snug text-ink-400">
@@ -224,7 +225,3 @@ function FigureView({ block }: { block: FigureBlock }) {
   );
 }
 
-/** Caption text for alt attributes: math left as its TeX source, markup dropped. */
-function stripMarkup(s: string) {
-  return s.replace(/<\/?(em|strong|code)>/g, '').replace(/\$\$?/g, '');
-}
