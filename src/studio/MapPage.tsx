@@ -1,6 +1,6 @@
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { Compass, Sparkles, Copy, Check, ShieldCheck, X } from 'lucide-react';
-import { TERRITORY, nodeById, dependentsOf, weekOf } from '../territory';
+import { TERRITORY, nodeById, dependentsOf, needStrength, weekOf, type NeedStrength } from '../territory';
 import type { TerritoryNode } from '../territory/parse';
 import { mdInline, mdToBlocks } from '../territory/markdown';
 import { PREWORK_MACROS } from '../prework/content';
@@ -69,6 +69,12 @@ function Legend() {
       </span>
       <span className="flex items-center gap-1.5">
         <svg width="26" height="8" aria-hidden="true">
+          <line x1="0" y1="4" x2="26" y2="4" stroke="#38bdf8" strokeWidth="2" strokeDasharray="14 4 2 4" />
+        </svg>
+        formal on some routes only (see the routes)
+      </span>
+      <span className="flex items-center gap-1.5">
+        <svg width="26" height="8" aria-hidden="true">
           <line x1="0" y1="4" x2="26" y2="4" stroke="#fbbf24" strokeWidth="1.5" />
         </svg>
         needed by
@@ -82,7 +88,7 @@ function Legend() {
 
 interface Curve {
   d: string;
-  kind: 'formal' | 'informal' | 'dependent';
+  kind: NeedStrength | 'dependent';
 }
 
 function MapCanvas({ selected, candidates }: { selected?: TerritoryNode; candidates: Set<string> }) {
@@ -91,9 +97,8 @@ function MapCanvas({ selected, candidates }: { selected?: TerritoryNode; candida
   const chips = useRef(new Map<string, HTMLElement>());
   const [curves, setCurves] = useState<Curve[]>([]);
 
-  const needs = new Map<string, 'formal' | 'informal'>();
-  for (const r of selected?.routes ?? [])
-    for (const n of r.needs) if (needs.get(n.node) !== 'formal') needs.set(n.node, n.kind);
+  const needs = new Map<string, NeedStrength>();
+  for (const r of selected?.routes ?? []) for (const n of r.needs) if (!needs.has(n.node)) needs.set(n.node, needStrength(selected!, n.node)!);
   const dependents = new Map(selected ? dependentsOf(selected.id).map((d) => [d.node.id, d.kind]) : []);
 
   const layout = useCallback(() => {
@@ -155,7 +160,7 @@ function MapCanvas({ selected, candidates }: { selected?: TerritoryNode; candida
             stroke={c.kind === 'dependent' ? '#fbbf24' : '#38bdf8'}
             strokeOpacity={c.kind === 'dependent' ? 0.7 : 0.9}
             strokeWidth={c.kind === 'dependent' ? 1.4 : 2}
-            strokeDasharray={c.kind === 'informal' ? '5 4' : undefined}
+            strokeDasharray={c.kind === 'informal' ? '5 4' : c.kind === 'some-routes' ? '14 4 2 4' : undefined}
             markerEnd={`url(#${c.kind === 'dependent' ? 'map-arrow-dep' : 'map-arrow'})`}
           />
         ))}
@@ -177,7 +182,7 @@ function MapCanvas({ selected, candidates }: { selected?: TerritoryNode; candida
                   ? 'border-accent-400 bg-accent-500/20 ring-2 ring-accent-400/50'
                   : need === 'formal'
                     ? 'border-accent-400/80 bg-accent-500/10'
-                    : need === 'informal'
+                    : need === 'informal' || need === 'some-routes'
                       ? 'border-dashed border-accent-400/80 bg-accent-500/[0.06]'
                       : dep
                         ? 'border-amber2-400/70 bg-amber2-500/[0.07]'
@@ -271,6 +276,7 @@ function NodePanel({ node, candidate }: { node: TerritoryNode; candidate: boolea
               <a key={d.node.id} href={href.map(d.node.id)} className="rounded-full border border-amber2-500/40 px-2 py-0.5 text-[11px] text-amber2-300 hover:bg-amber2-500/10">
                 {rich(d.node.title)}
                 {d.kind === 'informal' && <span className="text-ink-400"> (informal)</span>}
+                {d.kind === 'some-routes' && <span className="text-ink-400"> (on some routes)</span>}
               </a>
             ))}
           </div>

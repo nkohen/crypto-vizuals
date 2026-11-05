@@ -170,7 +170,7 @@ export const streamCipherProof: Proof = {
         { id: 'val-y', kind: 'value', role: 'input', x: 330, y: 120, w: 64, h: 64, label: '$y$' },
       ],
       arrows: [
-        { id: 'a1', from: 'prg-challenger', to: 'val-y', label: '$y$', flow: true },
+        { id: 'a1', from: 'prg-challenger', to: 'val-y', flow: true },
         { id: 'a2', from: 'val-y', to: 'b-role', label: '', flow: true },
         { id: 'a3', from: [540, 250], to: [540, 184], label: '$m_0, m_1$', flow: true },
         { id: 'a4', from: [680, 184], to: [680, 250], label: '$c = y \\oplus m_b$', flow: true },

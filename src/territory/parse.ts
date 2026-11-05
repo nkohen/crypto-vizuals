@@ -173,6 +173,7 @@ export function parseTerritory(md: string): Territory {
       return;
     }
     if ((m = FIRST_MET_RE.exec(line))) {
+      if (node.routes.length) fail(i, '"- **First met:**" goes with "- **Prework:**", before the routes');
       node.firstMet = m[1];
       node.firstMetWhere = m[2]?.trim();
       route = null;
@@ -185,7 +186,7 @@ export function parseTerritory(md: string): Territory {
       return;
     }
     if ((m = NEED_RE.exec(raw))) {
-      if (!route) fail(i, 'a need must sit under a "- **Route:**" line');
+      if (!route) fail(i, 'a need must sit directly under a "- **Route:**" line');
       if (route!.entry) fail(i, 'an entry route needs nothing');
       route!.needs.push({ kind: m[1] as NeedKind, node: m[2], why: (m[3] ?? '').trim() });
       return;
@@ -236,7 +237,13 @@ export function validateTerritory(t: Territory, prework?: PreworkIndex): string[
         if (need.node === n.id) problems.push(`line ${n.line}: ${n.id} needs itself`);
       }
     if (prework) for (const p of n.prework) if (!prework.citable.has(p)) problems.push(`line ${n.line}: ${n.id} cites unknown prework item ${p}`);
-    if (prework && n.firstMet && !prework.weekRank.has(n.firstMet)) problems.push(`line ${n.line}: ${n.id} is "First met" in unknown week ${n.firstMet}`);
+    if (prework && n.firstMet) {
+      const met = prework.weekRank.get(n.firstMet);
+      const cited = firstWeek({ ...n, firstMet: undefined }, prework.weekRank);
+      if (met === undefined) problems.push(`line ${n.line}: ${n.id} is "First met" in unknown week ${n.firstMet}`);
+      else if (cited !== undefined && met >= cited)
+        problems.push(`line ${n.line}: ${n.id}'s "First met" (Week ${n.firstMet}) is not earlier than its first citation; drop the line`);
+    }
   }
   // A formal cycle can only be a cycle through every route of each node on it
   // to be fatal, but even one cyclic route is a modelling error worth flagging.

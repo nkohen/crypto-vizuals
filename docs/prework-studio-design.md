@@ -140,7 +140,8 @@ entry names the intuition still missing. Sorting by handout week is curriculum o
 never uses to pick a lesson. The studio uses it only to sort a list, never to drop an entry (the Map page lists all of them; Home shows the
 first six and links to the rest), because the first version
 put Week 7 topics at the top of a Week 2 student's list, and a student reads the top of a list as advice. The Home page
-also shows **Next in the handouts** (the first item not yet marked done), labelled as plain handout order.
+also shows **Next in the handouts** (the first unfinished item from the furthest one marked onward, or "review on
+the map" once the last is done), labelled as plain handout order.
 This is deliberately weaker than learning-edge's selector (`tutor/edge.py`): it ignores the apply/generalize
 distinction and probe-trust, because a self-report carries no probe. The UI says so wherever candidates appear.
 **Cost:** it can over-credit, which is exactly the failure learning-edge warns about ("never trust a named background").
@@ -203,8 +204,10 @@ needs no server and no router dependency.
 **Cost:** there is no longer a viewer-only root page. `#/proof/stream-cipher` is the old app, now with a back link.
 
 ### 16. The map view: sections as rows of chips, curves only for the selected node — *default*
-Sections run top to bottom, foundations to goal. Selecting a node draws its needs (solid = formal, dashed = informal) and
-what needs it (amber). The detail panel lists every route with each need's one-line "how it bears".
+Sections run top to bottom, foundations to goal. Selecting a node draws its needs (solid = formal on every route,
+dashed = informal, dash-dot = formal on some routes only) and what needs it (amber, marked "(on some routes)" where
+that applies). Collapsing a need to its strongest kind would draw negligible functions as a hard prerequisite of
+the Week 2 DL/CDH/DDH node, whose first route does without it. The detail panel lists every route with each need's one-line "how it bears".
 **Cost:** there is no at-a-glance drawing of the whole graph. With roughly 35 nodes that drawing would be a hairball, so
 legibility won.
 

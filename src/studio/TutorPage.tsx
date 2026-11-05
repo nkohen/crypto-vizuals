@@ -92,7 +92,8 @@ export default function TutorPage() {
         <Cmd text={`unzip -n ~/Downloads/${zipName}`} />
         <p className="text-xs text-ink-400">
           <code>-n</code> never overwrites: if you already ran <code>/setup</code>, the tutor's copy of your profile (with what it has
-          observed since) is kept. If your browser unpacked the zip for you, copy <strong>both</strong> folders,{' '}
+          observed since) is kept. Then <code>unzip</code> lists only the map, and anything new you marked here was <em>not</em>{' '}
+          imported: tell the tutor about it in your next session. If your browser unpacked the zip for you, copy <strong>both</strong> folders,{' '}
           <code>territories/</code> and <code>learners/</code>, into the clone; the profile alone sends the tutor off to rebuild the map.
         </p>
         <p className="flex items-start gap-2 rounded-lg border border-amber2-500/25 bg-amber2-500/[0.06] px-3 py-2 text-xs text-amber2-200">
