@@ -286,7 +286,8 @@ function orderProblems(t: Territory, ids: Map<string, TerritoryNode>, prework: P
   const out: string[] = [];
   for (const n of t.nodes) {
     const week = firstWeek(n, prework.weekRank);
-    if (week === undefined) {
+    // "First met" dates a node; it does not anchor it to something a student can open.
+    if (week === undefined || n.prework.length === 0) {
       out.push(`line ${n.line}: ${n.id} cites no handout item (add a "- **Prework:**" line)`);
       continue;
     }

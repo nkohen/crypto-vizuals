@@ -16,7 +16,8 @@ Non-obvious points a future session needs:
 - learning-edge was **not modified**. If adopted, the map's home should move to
   `learning-edge/release/overlay/territories/`.
 - Studio grades are self-report = learning-edge rung `ask`. The profile export never sets `/setup` `done`: it
-  resumes at step 2 (no goal typed) or step 3 (goal typed; tutor decides if the map fits). It never names the map
+  resumes at step 2 either way (goal recorded or not), with a status-line note "do not re-copy the template" —
+  a convention `setup.md` is not written to honour; step 3 then decides if the map fits the goal. It never names the map
   as chosen, because `/setup` treats a named-but-missing map as an interrupted build and rebuilds it silently —
   hence map + profile ship in ONE zip.
 - Handout content is generated: rerun `npm run ingest:prework -- <prework checkout>` (needs a git checkout; it
